@@ -99,3 +99,14 @@ def test_bool_and_none_params(api, http):
     route = api.get(f"{WWW}/webapi/x").respond(json={})
     http.get(f"{WWW}/webapi/x", params={"a": True, "b": False, "c": None, "d": 3})
     assert dict(route.calls.last.request.url.params) == {"a": "true", "b": "false", "d": "3"}
+
+
+@pytest.mark.parametrize(
+    ("header", "delay"), [("-5", 0.0), ("999", 30.0), ("nan", 0.5), ("Wed, 21 Oct 2026", 0.5)]
+)
+def test_retry_after_is_clamped(api, http, header, delay):
+    api.get(f"{WWW}/webapi/x").mock(
+        side_effect=[httpx.Response(503, headers={"Retry-After": header}), httpx.Response(200, json={})]
+    )
+    http.get(f"{WWW}/webapi/x")
+    assert http.sleeps == [delay]

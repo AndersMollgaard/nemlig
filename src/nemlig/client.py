@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -33,12 +34,17 @@ from .models import (
     Suggestions,
 )
 from .models.basket import validation_failures
-from .session import SessionStore
+from .session import SessionStore, user_key
 
 ProductId = str | int
 
 # The anonymous delivery context depends on the time of day, so refetch it now and then.
 CONTEXT_TTL = 600
+# GetShoppingLists page size.
+LISTS_PAGE = 50
+
+# A product page path: letters, digits and dashes, so a slug can never reach another www path.
+_SLUG = re.compile(r"[\w-]+")
 
 
 class NemligClient:
@@ -52,7 +58,8 @@ class NemligClient:
     The cookie jar is saved to ``session_file`` (``~/.config/nemlig/session.json`` by default), so
     later runs do not have to log in. The password is never written to disk.
 
-    Checkout and payment are deliberately not supported.
+    Checkout and payment are deliberately not supported. A client is not thread-safe; use one
+    per thread.
     """
 
     def __init__(
@@ -69,12 +76,14 @@ class NemligClient:
     ) -> None:
         self._username = username
         self._password = password
+        self._user = user_key(username) if username and password else None
         self._http = Http(timeout=timeout, transport=transport, sleep=sleep)
         self._tokens = TokenManager(self._http, clock=clock)
         self._clock = clock
         self._store = SessionStore(session_file) if persist else None
         if self._store:
-            self._store.load(self._http.cookies.jar)
+            # With credentials, only this user's saved session is used.
+            self._store.load(self._http.cookies.jar, self._user)
         self._context: DeliveryContext | None = None
         self._context_at = 0.0
 
@@ -93,8 +102,10 @@ class NemligClient:
         self.close()
 
     def close(self) -> None:
-        self._save_session()
-        self._http.close()
+        try:
+            self._save_session()
+        finally:
+            self._http.close()
 
     # -- session ------------------------------------------------------------------------------
 
@@ -148,7 +159,7 @@ class NemligClient:
 
     def _save_session(self) -> None:
         if self._store and any(c.name == ".ASPXAUTH" for c in self._http.cookies.jar):
-            self._store.save(self._http.cookies.jar)
+            self._store.save(self._http.cookies.jar, self._user or self._store.user)
 
     # -- delivery context ---------------------------------------------------------------------
 
@@ -176,8 +187,8 @@ class NemligClient:
             self._context = context
             self._context_at = self._clock()
 
-    def _basket(self, data: dict[str, Any]) -> Basket:
-        basket = Basket.from_api(data)
+    def _basket(self, data: Any) -> Basket:
+        basket = Basket.from_api(_object(data, "basket"))
         self._set_context(basket.delivery_context)
         return basket
 
@@ -218,6 +229,8 @@ class NemligClient:
             path = product.slug or product.id
         else:
             path = str(product).strip().removeprefix(WWW).strip("/")
+        if not _SLUG.fullmatch(path):
+            raise ValueError(f"not a product id or slug: {product!r}")
         if path.isdigit():
             # Any "<text>-<id>" path redirects to the product's canonical slug.
             path = f"p-{path}"
@@ -301,12 +314,11 @@ class NemligClient:
     def reserve_slot(self, slot_id: int) -> SlotReservation:
         """Reserve a delivery slot for the basket (``DeliverySlot.id``)."""
         self._require_login()
-        data = (
-            self._http.post(
-                f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime", params={"timeslotId": int(slot_id)}
-            )
-            or {}
+        data = self._http.post(
+            f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime", params={"timeslotId": int(slot_id)}
         )
+        if not isinstance(data, dict):
+            data = {}  # the response is undocumented; the basket read below decides
         basket = self.get_basket()
         slot = basket.delivery_slot
         reserved = (
@@ -330,7 +342,8 @@ class NemligClient:
     def get_order(self, order_id: int) -> Order:
         """One past order with its product lines. ``order_id`` is `OrderSummary.id`."""
         self._require_login()
-        return Order.from_api(self._http.get(f"{WWW}/webapi/v2/order/GetOrderHistory/{int(order_id)}"))
+        data = self._http.get(f"{WWW}/webapi/v2/order/GetOrderHistory/{int(order_id)}")
+        return Order.from_api(_object(data, "order"))
 
     def reorder(self, order_id: int) -> Basket:
         """Add every product of a past order to the basket, on top of what is there.
@@ -383,29 +396,33 @@ class NemligClient:
     def get_shopping_lists(self) -> list[ShoppingListSummary]:
         self._require_login()
         lists: list[ShoppingListSummary] = []
-        page, pages = 1, 1
-        while page <= pages:
-            data = (
-                self._http.get(
-                    f"{WWW}/webapi/ShoppingList/GetShoppingLists", params={"skip": page, "take": 50}
-                )
-                or {}
+        seen: set[int] = set()
+        # Unlike order history, ``skip`` counts lists, not pages: the first page is skip=0.
+        skip = 0
+        while True:
+            data = self._http.get(
+                f"{WWW}/webapi/ShoppingList/GetShoppingLists", params={"skip": skip, "take": LISTS_PAGE}
             )
-            items = data.get("ShoppingListOverViewViewModels") or []
-            lists += [ShoppingListSummary.from_api(x) for x in items]
-            pages = int(data.get("NumberOfPages") or 1)
-            page += 1
-        return lists
+            items = [
+                ShoppingListSummary.from_api(x)
+                for x in (data or {}).get("ShoppingListOverViewViewModels") or []
+            ]
+            new = [x for x in items if x.id not in seen]
+            lists += new
+            seen.update(x.id for x in new)
+            if len(items) < LISTS_PAGE or not new:
+                return lists
+            skip += LISTS_PAGE
 
     def get_shopping_list(self, list_id: int) -> ShoppingList:
         self._require_login()
         data = self._http.get(f"{WWW}/webapi/ShoppingList/getShoppingList", params={"listId": int(list_id)})
-        return ShoppingList.from_api(data)
+        return ShoppingList.from_api(_object(data, "shopping list"))
 
     def create_shopping_list(self, name: str) -> ShoppingList:
         self._require_login()
         data = self._http.post(f"{WWW}/webapi/ShoppingList/CreateShoppingList", params={"name": name})
-        return ShoppingList.from_api(data)
+        return ShoppingList.from_api(_object(data, "shopping list"))
 
     def set_shopping_list_item(self, list_id: int, product_id: ProductId, quantity: int) -> ShoppingList:
         """Set a product's quantity in a shopping list. Absolute; 0 removes it."""
@@ -417,6 +434,7 @@ class NemligClient:
             f"{WWW}/webapi/ShoppingList/UpdateProductInShoppingList",
             params={"listId": int(list_id), "productId": _pid(product_id), "amount": quantity},
         )
+        data = _object(data, "shopping list")
         return ShoppingList.from_api(data.get("List") or data)
 
     def delete_shopping_list(self, list_id: int) -> None:
@@ -438,6 +456,13 @@ class NemligClient:
         """Whether the session is logged in, without any personal details."""
         self._require_login()
         return Account.from_api(self._http.get(f"{WWW}/webapi/user/GetCurrentUser") or {})
+
+
+def _object(data: Any, what: str) -> dict[str, Any]:
+    """The decoded body, which must be a JSON object; an empty 200 raises instead of crashing a model."""
+    if not isinstance(data, dict):
+        raise ApiError(200, f"expected a {what} object, got {type(data).__name__}")
+    return data
 
 
 def _pid(product_id: ProductId) -> str:

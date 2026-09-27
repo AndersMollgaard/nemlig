@@ -45,7 +45,7 @@ with NemligClient.from_env() as nc:
     for p in hits.products:
         print(p.id, p.name, p.price, p.offer)
 
-    nc.add_to_basket(hits.products[0].id, 2)   # adds on top of the current quantity
+    nc.add_to_basket(hits.products[0].id, 2)  # adds on top of the current quantity
     basket = nc.set_quantity(hits.products[0].id, 1)  # absolute; 0 removes
     print(basket.total_price, basket.is_min_total_valid)
 ```
@@ -80,7 +80,9 @@ Behaviour worth knowing:
 - **Errors.** `ApiError` (with nemlig's `error_code`), `AuthError` (wrong username or password),
   `NotLoggedInError`, `QueueItError`, all subclasses of `NemligError`.
 - **Session file.** Override with `session_file=` or `NEMLIG_SESSION_FILE`; `persist=False`
-  keeps the session in memory only. It is written with mode 600.
+  keeps the session in memory only. It is written with mode 600, and records a hash of the
+  username so a client with credentials never reuses another account's session.
+- **Not thread-safe.** Use one client per thread.
 - `clear_basket()` and `reserve_slot()` follow other clients' usage and read the basket back
   afterwards, but have not been exercised against the real site.
 

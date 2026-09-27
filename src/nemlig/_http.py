@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 import uuid
 from collections.abc import Callable
@@ -162,9 +163,10 @@ def _clean(params: dict[str, Any] | None) -> dict[str, Any] | None:
 def _retry_after(resp: httpx.Response) -> float | None:
     value = resp.headers.get("retry-after", "")
     try:
-        return min(float(value), 30.0)
+        delay = float(value)
     except ValueError:
-        return None
+        return None  # e.g. an HTTP date: fall back to the backoff
+    return min(max(delay, 0.0), 30.0) if math.isfinite(delay) else None
 
 
 def _to_api_error(resp: httpx.Response) -> ApiError:

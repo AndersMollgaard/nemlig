@@ -1,5 +1,6 @@
 import json
 
+import httpx
 import pytest
 from conftest import GW, WWW, fixture
 
@@ -159,3 +160,40 @@ def test_shopping_lists(api, customer, basket_route):
     assert params(remove) == {"listId": "9"}
     customer.add_shopping_list_to_basket(9)
     assert body(to_basket) == {"ListId": 9, "ConfirmMissingProducts": False}
+
+
+def test_shopping_lists_page_by_offset(api, customer):
+    def page(start, count):
+        return {
+            "ShoppingListOverViewViewModels": [{"Id": i, "Name": "x"} for i in range(start, start + count)]
+        }
+
+    route = api.get(f"{WWW}/webapi/ShoppingList/GetShoppingLists").mock(
+        side_effect=[httpx.Response(200, json=page(0, 50)), httpx.Response(200, json=page(50, 3))]
+    )
+    assert [s.id for s in customer.get_shopping_lists()] == list(range(53))
+    assert [dict(c.request.url.params)["skip"] for c in route.calls] == ["0", "50"]
+
+
+def test_shopping_lists_stop_when_a_page_repeats(api, customer):
+    full = {"ShoppingListOverViewViewModels": [{"Id": i, "Name": "x"} for i in range(50)]}
+    route = api.get(f"{WWW}/webapi/ShoppingList/GetShoppingLists").respond(json=full)
+    assert len(customer.get_shopping_lists()) == 50
+    assert route.call_count == 2
+
+
+def test_reserve_slot_tolerates_a_bare_boolean(api, customer, basket_route):
+    api.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime").respond(json=True)
+    assert customer.reserve_slot(2403209).reserved
+
+
+@pytest.mark.parametrize("bad", ["../webapi/user/GetCurrentUser", "a/b", "x?GetAsJson=0", "", "p-1#404"])
+def test_get_product_rejects_other_paths(customer, bad):
+    with pytest.raises(ValueError):
+        customer.get_product(bad)
+
+
+def test_empty_basket_body_is_an_api_error(api, customer):
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(200, content=b"")
+    with pytest.raises(ApiError):
+        customer.get_basket()

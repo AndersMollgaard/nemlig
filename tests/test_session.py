@@ -1,10 +1,12 @@
+import json
 import stat
 
 import httpx
+import pytest
 from conftest import WWW, token_body
 
 from nemlig import NemligClient
-from nemlig.session import SessionStore
+from nemlig.session import SessionStore, user_key
 
 
 def test_round_trip_and_permissions(tmp_path):
@@ -49,3 +51,43 @@ def test_logout_deletes_session_file(api, tmp_path):
     client.logout()
     client.close()
     assert not path.exists()
+
+
+def saved_session(path, user=None):
+    jar = httpx.Cookies()
+    jar.set(".ASPXAUTH", "saved", domain="www.nemlig.com", path="/")
+    SessionStore(path).save(jar.jar, user)
+
+
+def test_credentials_use_only_their_own_session(api, tmp_path):
+    path = tmp_path / "session.json"
+    saved_session(path, user_key("a@example.com"))
+    api.get(f"{WWW}/webapi/Token").respond(json=token_body(debitor="1"))
+
+    with NemligClient(" A@example.com", "pw", session_file=path) as same:
+        assert same._http.cookies.get(".ASPXAUTH") == "saved"
+    with NemligClient("b@example.com", "pw", session_file=path) as other:
+        assert other._http.cookies.get(".ASPXAUTH") is None
+
+
+def test_credentials_ignore_a_session_of_unknown_user(tmp_path):
+    path = tmp_path / "session.json"
+    saved_session(path)
+    with NemligClient("a@example.com", "pw", session_file=path) as client:
+        assert client._http.cookies.get(".ASPXAUTH") is None
+
+
+def test_saving_without_credentials_keeps_the_owner(tmp_path):
+    path = tmp_path / "session.json"
+    saved_session(path, user_key("a@example.com"))
+    NemligClient(session_file=path).close()
+    assert json.loads(path.read_text())["user"] == user_key("a@example.com")
+
+
+@pytest.mark.parametrize("content", ["[]", '{"cookies": [1]}', '{"cookies": [{"name": "x"}]}'])
+def test_load_malformed(tmp_path, content):
+    path = tmp_path / "session.json"
+    path.write_text(content)
+    jar = httpx.Cookies()
+    assert not SessionStore(path).load(jar.jar)
+    assert not list(jar.jar)

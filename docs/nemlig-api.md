@@ -260,6 +260,10 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
   `/?search=p#404`.
 - **Order history paging:** `skip` is a **1-based page number** and `take` the page size, not an
   offset. `skip=0` and `skip=1` both return page 1.
+- **Shopping list paging:** unlike order history, `GetShoppingLists`' `skip` counts lists, not
+  pages, and the site sends `skip=0` for the first page. With one list, `take=1&skip=1` is empty
+  but `take=2&skip=1` still returns it, so the server seems to round `skip` down to a page
+  boundary. `NumberOfPages` is 0 on an empty page.
 - **productbff without `timeslotId`:** `/favoritter` (logged in) and `/tilbud` (anonymous)
   both return 200 without it, contrary to the note in the endpoint table.
 - **Offers:** `/tilbud` returned 1613 products in 15 sections, 1331 unique.

@@ -7,7 +7,8 @@ from pathlib import Path
 
 
 def read_env_file(path: str | os.PathLike[str]) -> dict[str, str]:
-    """Parse ``KEY=value`` lines. Blank lines and ``#`` comments are skipped, quotes stripped."""
+    """Parse ``KEY=value`` lines. Blank lines and ``#`` comments are skipped, and one pair of
+    matching surrounding quotes is removed (so a password may end in a quote character)."""
     out: dict[str, str] = {}
     p = Path(path)
     if not p.is_file():
@@ -18,7 +19,10 @@ def read_env_file(path: str | os.PathLike[str]) -> dict[str, str]:
             continue
         key, value = line.split("=", 1)
         key = key.strip().removeprefix("export ").strip()
-        out[key] = value.strip().strip('"').strip("'")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        out[key] = value
     return out
 
 

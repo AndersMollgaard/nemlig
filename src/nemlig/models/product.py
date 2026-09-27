@@ -53,7 +53,7 @@ class Product(Model):
             id=str(d["id"]),
             name=d.get("title") or "",
             brand=tracking.get("item_brand") or None,
-            description=d.get("description"),
+            description=d.get("description") or None,
             price=ore_to_kr(d.get("price")),
             original_price=ore_to_kr(d.get("priceOriginal")),
             unit_price=ore_to_kr(per_unit.get("value")),
