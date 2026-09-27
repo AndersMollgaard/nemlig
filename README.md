@@ -1,8 +1,7 @@
 # nemlig
 
 A client for [nemlig.com](https://www.nemlig.com), the Danish online grocery store. It is a
-Python library to search for products and fill the basket from a script, and later from a CLI
-or an MCP server.
+Python library to search for products and fill the basket from a script or the command line.
 
 Nemlig has no public API. This project talks to the same JSON endpoints the nemlig.com website
 uses, so it is unofficial and may break when the site changes.
@@ -146,12 +145,6 @@ uv run ruff check . && uv run ruff format --check .
 
 The live tests only read, plus two reverted writes: a basket quantity change that is set back
 afterwards, and a temporary shopping list that is deleted again.
-
-## Later
-
-An MCP server on top of the client. The flat method surface maps directly onto tools, and the
-models are already trimmed for an LLM's context. It would likely ship as an optional extra
-(`nemlig[mcp]`).
 
 ## Repo layout
 
