@@ -86,6 +86,40 @@ Behaviour worth knowing:
 - `clear_basket()` and `reserve_slot()` follow other clients' usage and read the basket back
   afterwards, but have not been exercised against the real site.
 
+## CLI
+
+`uv sync` installs a `nemlig` command (also `python -m nemlig`). It is written to be driven by
+an agent: every command prints one JSON document on stdout, and `nemlig --help` explains the
+workflow. Add `--text` for a compact human view.
+
+```sh
+nemlig search "havregryn" --limit 5       # pick a product "id" from the results
+nemlig basket add 5050406:2 5043017        # add 2 of one product and 1 of another
+nemlig basket set 5050406:1                # absolute quantity; 0 removes
+nemlig --text basket                       # lines, totals, minimum order, delivery slot
+```
+
+| Command | What |
+| --- | --- |
+| `search QUERY [--limit] [--offset]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products |
+| `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
+| `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots |
+| `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID` | Order history |
+| `favourites`, `offers [--limit]` | Favourites and offers |
+| `lists`, `lists show ID`, `lists create NAME`, `lists set LIST_ID ID:QTY...`, `lists delete ID --yes`, `lists to-basket ID` | Shopping lists |
+| `status`, `login`, `logout` | Session |
+
+- **Output.** JSON with null and empty fields, image URLs and slugs left out. Basket changes
+  print the resulting basket.
+- **Several items per call.** `basket add/set/remove` and `lists set` apply their items in order.
+  If one fails, the error lists the items that were already `applied`, so an agent can recover
+  without adding twice.
+- **Errors** go to stderr as `{"error": "<class>", "message": ...}`. Exit codes: 0 ok, 1
+  nemlig.com or network error, 2 bad usage, 3 not logged in or login rejected.
+- **Credentials** come from `NEMLIG_USER` / `NEMLIG_PASS` in the environment, `--env-file`
+  (or `NEMLIG_ENV_FILE`), `./.env`, or `~/.config/nemlig/.env`, in that order. The session is
+  saved as with the library; `--no-session` turns that off.
+
 ## Tests
 
 ```sh
@@ -99,15 +133,16 @@ afterwards, and a temporary shopping list that is deleted again.
 
 ## Later
 
-The client is meant to sit under a CLI and an MCP server. The flat method surface maps directly
-onto commands or tools, and the models are already trimmed for an LLM's context. Both would
-likely ship as optional extras (`nemlig[cli]`, `nemlig[mcp]`).
+An MCP server on top of the client. The flat method surface maps directly onto tools, and the
+models are already trimmed for an LLM's context. It would likely ship as an optional extra
+(`nemlig[mcp]`).
 
 ## Repo layout
 
 | Path | What |
 | --- | --- |
 | `src/nemlig/client.py` | `NemligClient`, the public API |
+| `src/nemlig/cli.py` | The `nemlig` command |
 | `src/nemlig/models/` | Response models, built from the API's dicts |
 | `src/nemlig/_http.py`, `auth.py`, `session.py` | Transport and retries, login and JWT, cookie persistence |
 | `tests/` | Offline unit tests; `tests/live/` hits the real site |
