@@ -1,0 +1,297 @@
+{
+  "_note": "GET gw/productbff/api/web/page?path=/favoritter&timeslotId=<slot Id> with customer JWT. camelCase, prices in øre. pageContent[] sections of contentType ProductList.",
+  "response": {
+    "id": "3b31f2fb-85d1-48e5-a4da-9fc726a9bb8f",
+    "pageType": "themePage",
+    "title": "Favoritter",
+    "description": null,
+    "seo": {
+      "title": "",
+      "description": "",
+      "content": "",
+      "noIndex": false
+    },
+    "pageContent": [
+      {
+        "contentType": "ProductList",
+        "anchorId": "0-e2f44f1a-cebc-4180-9f09-2f3e350bfa3b",
+        "products": [
+          {
+            "id": "106499",
+            "url": "106499",
+            "title": "Cherrytomater øko.",
+            "description": "250 g",
+            "price": 1200,
+            "priceOriginal": 1500,
+            "priceDiscount": 300,
+            "pricePerUnit": {
+              "value": 4800,
+              "unitType": "Weight"
+            },
+            "currency": "DKK",
+            "labelMaxQuantity": null,
+            "labelFreshnessDays": null,
+            "labelHighlighted": {
+              "type": "PriceMatch",
+              "url": "/dagligvarer/nye-varer-inspiration/prismatch"
+            },
+            "certificates": [
+              {
+                "type": "euOrganic",
+                "text": "Øko (europæisk)"
+              }
+            ],
+            "campaignLines": [],
+            "campaignBadge": {
+              "primaryText": "3,-",
+              "secondaryText": "Spar",
+              "accessibilityText": "Spar 3 kroner"
+            },
+            "quantity": 0,
+            "unitOfMeasure": "Kg.",
+            "quantityLimit": null,
+            "isFavorite": true,
+            "isInShoppingList": false,
+            "availability": {
+              "type": "Available",
+              "nextAvailableDate": "0001-01-01T00:00:00Z",
+              "reasonMessage": []
+            },
+            "tracking": {
+              "impression": "",
+              "item_category": "Frugt-og-groent",
+              "item_category2": "Groentsager",
+              "item_category3": "Tomat",
+              "item_name": "Cherrytomater øko.",
+              "item_id": "106499",
+              "price": "15.0",
+              "discount": "3.0",
+              "item_brand": "",
+              "item_variant": "produkt",
+              "raptor_category_path": ""
+            },
+            "dataLayerTracking": {
+              "item_list_id": "one-row",
+              "item_list_name": "Favoritter på tilbud"
+            },
+            "image": {
+              "source": "https://product-images.nemlig.io/106499.webp",
+              "accessibilityText": "Billede af Cherrytomater øko."
+            }
+          },
+          {
+            "id": "2301103",
+            "url": "2301103",
+            "title": "Peberfrugt rød",
+            "description": "1 stk.",
+            "price": 700,
+            "priceOriginal": 900,
+            "priceDiscount": 200,
+            "pricePerUnit": {
+              "value": 700,
+              "unitType": "Pieces"
+            },
+            "currency": "DKK",
+            "labelMaxQuantity": null,
+            "labelFreshnessDays": null,
+            "labelHighlighted": {
+              "type": "PriceMatch",
+              "url": "/dagligvarer/nye-varer-inspiration/prismatch"
+            },
+            "certificates": [],
+            "campaignLines": [],
+            "campaignBadge": {
+              "primaryText": "2,-",
+              "secondaryText": "Spar",
+              "accessibilityText": "Spar 2 kroner"
+            },
+            "quantity": 0,
+            "unitOfMeasure": "Stk.",
+            "quantityLimit": null,
+            "isFavorite": true,
+            "isInShoppingList": false,
+            "availability": {
+              "type": "Available",
+              "nextAvailableDate": "0001-01-01T00:00:00Z",
+              "reasonMessage": []
+            },
+            "tracking": {
+              "impression": "",
+              "item_category": "Frugt-og-groent",
+              "item_category2": "Groentsager",
+              "item_category3": "Peberfrugt-og-chili",
+              "item_name": "Peberfrugt rød",
+              "item_id": "2301103",
+              "price": "9.0",
+              "discount": "2.0",
+              "item_brand": "",
+              "item_variant": "produkt",
+              "raptor_category_path": ""
+            },
+            "dataLayerTracking": {
+              "item_list_id": "one-row",
+              "item_list_name": "Favoritter på tilbud"
+            },
+            "image": {
+              "source": "https://product-images.nemlig.io/2301103.webp",
+              "accessibilityText": "Billede af Peberfrugt rød"
+            }
+          }
+        ],
+        "layout": "Onerow",
+        "header": {
+          "title": "Favoritter på tilbud",
+          "subtitle": null,
+          "image": {
+            "source": "https://media.umbraco.io/nemlig3/5u0brnpe/favorites-on-offer-1.png?mode=crop&anchor=center&width=64&height=64",
+            "accessibilityText": "Favorites on offer"
+          },
+          "button": null
+        }
+      },
+      {
+        "contentType": "ProductList",
+        "anchorId": "1-6d3cc32f-d1d7-4ded-9136-8d29b0454795",
+        "products": [
+          {
+            "id": "2301138",
+            "url": "2301138",
+            "title": "Banan",
+            "description": "1 stk.",
+            "price": 250,
+            "priceOriginal": null,
+            "priceDiscount": null,
+            "pricePerUnit": {
+              "value": 250,
+              "unitType": "Pieces"
+            },
+            "currency": "DKK",
+            "labelMaxQuantity": null,
+            "labelFreshnessDays": null,
+            "labelHighlighted": null,
+            "certificates": [],
+            "campaignLines": [],
+            "campaignBadge": null,
+            "quantity": 0,
+            "unitOfMeasure": "Stk.",
+            "quantityLimit": null,
+            "isFavorite": true,
+            "isInShoppingList": false,
+            "availability": {
+              "type": "Available",
+              "nextAvailableDate": "0001-01-01T00:00:00Z",
+              "reasonMessage": []
+            },
+            "tracking": {
+              "impression": "",
+              "item_category": "Frugt-og-groent",
+              "item_category2": "Frugt",
+              "item_category3": "Bananer",
+              "item_name": "Banan",
+              "item_id": "2301138",
+              "price": "2.5",
+              "discount": "0",
+              "item_brand": "",
+              "item_variant": "produkt",
+              "raptor_category_path": ""
+            },
+            "dataLayerTracking": {
+              "item_list_id": "list",
+              "item_list_name": "Frugt og grønt"
+            },
+            "image": {
+              "source": "https://product-images.nemlig.io/2301138.webp",
+              "accessibilityText": "Billede af Banan"
+            }
+          },
+          {
+            "id": "5012649",
+            "url": "5012649",
+            "title": "Æbler Pink Lady",
+            "description": "8 stk. / ca. 1000g",
+            "price": 2700,
+            "priceOriginal": null,
+            "priceDiscount": null,
+            "pricePerUnit": {
+              "value": 337,
+              "unitType": "Pieces"
+            },
+            "currency": "DKK",
+            "labelMaxQuantity": null,
+            "labelFreshnessDays": null,
+            "labelHighlighted": {
+              "type": "PriceMatch",
+              "url": "/dagligvarer/nye-varer-inspiration/prismatch"
+            },
+            "certificates": [],
+            "campaignLines": [],
+            "campaignBadge": null,
+            "quantity": 0,
+            "unitOfMeasure": "Stk.",
+            "quantityLimit": null,
+            "isFavorite": true,
+            "isInShoppingList": false,
+            "availability": {
+              "type": "Available",
+              "nextAvailableDate": "0001-01-01T00:00:00Z",
+              "reasonMessage": []
+            },
+            "tracking": {
+              "impression": "",
+              "item_category": "Frugt-og-groent",
+              "item_category2": "Frugt",
+              "item_category3": "Aebler",
+              "item_name": "Æbler Pink Lady",
+              "item_id": "5012649",
+              "price": "27.0",
+              "discount": "0",
+              "item_brand": "",
+              "item_variant": "produkt",
+              "raptor_category_path": ""
+            },
+            "dataLayerTracking": {
+              "item_list_id": "list",
+              "item_list_name": "Frugt og grønt"
+            },
+            "image": {
+              "source": "https://product-images.nemlig.io/5012649.webp",
+              "accessibilityText": "Billede af Æbler Pink Lady"
+            }
+          }
+        ],
+        "layout": "Showall",
+        "header": {
+          "title": "Frugt og grønt",
+          "subtitle": null,
+          "image": null,
+          "button": null
+        }
+      }
+    ],
+    "topBanner": null,
+    "breadcrumbs": [
+      {
+        "title": "Favoritter",
+        "url": "/favoritter"
+      }
+    ],
+    "navigationItems": [
+      {
+        "title": "Favoritter på tilbud",
+        "anchorId": "0-e2f44f1a-cebc-4180-9f09-2f3e350bfa3b",
+        "image": {
+          "source": "https://media.umbraco.io/nemlig3/5u0brnpe/favorites-on-offer-1.png?mode=crop&anchor=center&width=64&height=64",
+          "accessibilityText": "Favorites on offer"
+        }
+      },
+      {
+        "title": "Frugt og grønt",
+        "anchorId": "1-6d3cc32f-d1d7-4ded-9136-8d29b0454795",
+        "image": {
+          "source": "https://media.umbraco.io/nemlig3/vd3lb3yg/frugt-og-groent.png?mode=crop&anchor=center&width=64&height=64",
+          "accessibilityText": "Frugt og grønt"
+        }
+      }
+    ]
+  }
+}

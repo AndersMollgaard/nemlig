@@ -1,0 +1,22 @@
+{
+  "_note": "GET www/?GetAsJson=1 (anonymous). Only Settings kept; content/aside are page widgets.",
+  "response": {
+    "topLevelKeys": [
+      "MetaData",
+      "Settings",
+      "aside",
+      "content"
+    ],
+    "Settings": {
+      "ZipCode": "0",
+      "DeliveryZoneId": 1,
+      "TimeslotUtc": "2026092714-60-240",
+      "BuildVersion": "b1.0.9742.33427",
+      "SitecorePublishedStamp": "cBcjsbQb",
+      "ProductsImportedTimestamp": "AAAAAAAA",
+      "CombinedProductsAndSitecoreTimestamp": "AAAAAAAA-cBcjsbQb",
+      "StaticResourcesPath": "/scom/dist/",
+      "UserId": null
+    }
+  }
+}

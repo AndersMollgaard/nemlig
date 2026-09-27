@@ -1,0 +1,15 @@
+{
+  "_note": "POST www/webapi/login. Note DeliveryZoneId here may differ from the basket's (1 vs 4 seen).",
+  "response": {
+    "RedirectUrl": "/",
+    "MergeSuccessful": true,
+    "ZipCodeDiffers": false,
+    "TimeslotUtc": "2026092714-120-240",
+    "DeliveryZoneId": 1,
+    "GdprSettings": "<redacted>",
+    "IsExternalLogin": false,
+    "IsFirstLogin": false,
+    "SaveExistingBasket": false,
+    "RemovedMealBoxes": []
+  }
+}

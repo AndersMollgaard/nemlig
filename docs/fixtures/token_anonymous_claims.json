@@ -1,0 +1,47 @@
+{
+  "_note": "Decoded JWT payload from GET www/webapi/Token without login. Response body is {upgraded, access_token, expires_in: 300, refresh_expires_in, token_type: 'Bearer', not-before-policy}.",
+  "response": {
+    "exp": 1790497857,
+    "iat": 1790497557,
+    "jti": "<redacted>",
+    "iss": "https://keycloak.mgmt.prod.k8s.nemlig/auth/realms/sitecore",
+    "aud": "sitecore",
+    "sub": "<redacted>",
+    "typ": "Bearer",
+    "azp": "sitecore",
+    "acr": "1",
+    "allowed-origins": [
+      "/*"
+    ],
+    "realm_access": {
+      "roles": [
+        "offline_access",
+        "default-roles-sitecore"
+      ]
+    },
+    "resource_access": {
+      "sitecore": {
+        "roles": [
+          "uma_protection"
+        ]
+      },
+      "account": {
+        "roles": [
+          "manage-account",
+          "manage-account-links"
+        ]
+      }
+    },
+    "authorization": {
+      "permissions": [
+        {
+          "rsid": "8ddb6702-662e-4cce-b669-12b0b389e6e9",
+          "rsname": "Default Resource"
+        }
+      ]
+    },
+    "scope": "profile email",
+    "email_verified": false,
+    "preferred_username": "service-account-sitecore"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "_note": "GET www/webapi/ShoppingList/GetShoppingLists?skip=0&take=6. Name and Url (which embeds the name) redacted.",
+  "response": {
+    "ShoppingListOverViewViewModels": [
+      {
+        "Id": 100001,
+        "Name": "<redacted>",
+        "Url": "<redacted>",
+        "ContainsDeactivatedData": false,
+        "ProductsCount": 4,
+        "TotalAmount": 58.45,
+        "ProductCountInList": 0
+      }
+    ],
+    "NumberOfPages": 1
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "_note": "POST www/webapi/order/CopyOrder with a bogus id: the standard /webapi error envelope (HTTP 400).",
+  "response": {
+    "status": 400,
+    "body": {
+      "Data": null,
+      "ErrorCode": 8,
+      "ComplexError": null,
+      "ErrorMessage": "Order not found",
+      "DeveloperMessage": "Order with id: 0 was not found",
+      "ValidationFailures": []
+    }
+  }
+}

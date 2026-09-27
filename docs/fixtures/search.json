@@ -1,0 +1,287 @@
+{
+  "_note": "GET gw/searchgateway/api/search?query=havregryn with the basket's timeslotUtc, deliveryZoneId, TimeSlotId. Full response was ~93 KB for 5 hits; TopUpOrderProducts/Recipes/Ads/Facets are the bulk.",
+  "response": {
+    "Products": {
+      "Products": [
+        {
+          "TemplateName": "productlistitem",
+          "PrimaryImage": "https://nemlig.com//scommerce/images/havregryn-finvalsede-oeko.jpg?i=XgsCh03M/5050406",
+          "Availability": {
+            "IsDeliveryAvailable": true,
+            "IsAvailableInStock": true,
+            "ReasonMessageKeys": []
+          },
+          "Id": "5050406",
+          "Name": "Havregryn (finvalsede) øko.",
+          "Category": "Kolonial",
+          "Brand": "Go' Morgen",
+          "SubCategory": "Gryn",
+          "Url": "havregryn-finvalsede-oeko-5050406",
+          "UnitPriceCalc": 9.95,
+          "UnitPriceLabel": "kr/kg",
+          "DiscountItem": true,
+          "Description": "1 kg / Go' Morgen",
+          "SaleBeforeLastSalesDate": 90,
+          "Price": 9.95,
+          "Labels": [
+            "Øko (dansk)",
+            "Øko (europæisk)"
+          ],
+          "Favorite": false,
+          "ProductSubGroupNumber": "1001700006",
+          "ProductSubGroupName": "Gryn, morgenmad",
+          "ProductCategoryGroupNumber": "1001700000",
+          "ProductCategoryGroupName": "Morgenmad",
+          "ProductMainGroupNumber": "1000000000",
+          "ProductMainGroupName": "Tørvarer"
+        },
+        {
+          "TemplateName": "productlistitem",
+          "PrimaryImage": "https://nemlig.com//scommerce/images/havregryn-grovvalsede-oeko.jpg?i=H1Eum-ys/5051800",
+          "Availability": {
+            "IsDeliveryAvailable": true,
+            "IsAvailableInStock": true,
+            "ReasonMessageKeys": []
+          },
+          "Id": "5051800",
+          "Name": "Havregryn (grovvalsede) øko.",
+          "Category": "Kolonial",
+          "Brand": "Go' Morgen",
+          "SubCategory": "Gryn",
+          "Url": "havregryn-grovvalsede-oeko-5051800",
+          "UnitPriceCalc": 10.64,
+          "UnitPriceLabel": "kr/kg",
+          "DiscountItem": false,
+          "Description": "1 kg / Go' Morgen",
+          "SaleBeforeLastSalesDate": 90,
+          "Price": 10.64,
+          "Labels": [
+            "Øko (dansk)",
+            "Øko (europæisk)"
+          ],
+          "Favorite": false,
+          "ProductSubGroupNumber": "1001700006",
+          "ProductSubGroupName": "Gryn, morgenmad",
+          "ProductCategoryGroupNumber": "1001700000",
+          "ProductCategoryGroupName": "Morgenmad",
+          "ProductMainGroupNumber": "1000000000",
+          "ProductMainGroupName": "Tørvarer"
+        }
+      ],
+      "Start": 0,
+      "NumFound": 14
+    },
+    "Facets": {
+      "NumFound": 14,
+      "SortingList": [
+        {
+          "Title": "Ingen valgt",
+          "UrlName": "default",
+          "IsSelected": true
+        },
+        {
+          "Title": "Anbefalet til dig",
+          "UrlName": "recommended",
+          "IsSelected": false
+        }
+      ],
+      "FacetGroups": [
+        {
+          "Type": "FacetQueryGroup",
+          "Items": [
+            {
+              "Type": "FacetQuery",
+              "Text": "Prismatch",
+              "UrlName": "discount",
+              "IsSelected": false,
+              "Amount": 5
+            },
+            {
+              "Type": "FacetQuery",
+              "Text": "Premium",
+              "UrlName": "premium",
+              "IsSelected": false,
+              "Amount": 0
+            }
+          ]
+        }
+      ],
+      "FacetPivots": []
+    },
+    "Recipes": [
+      {
+        "TemplateName": "recipelistitem",
+        "PrimaryImage": "https://nemlig.com/scommerce/images/NEJ_Over-natten-chiagroed_opskrift_98001128_Urtekram.jpg?i={3A2E0A90-17E1-41EE-8714-68B3F89A3F4A}&v=gFavwr1J",
+        "Id": "205a5b2f-bfa7-4587-8c2e-1b9add9d93d5",
+        "Name": "Over-natten chiagrød med havregryn",
+        "Url": "/opskrifter/over-natten-chiagroed-98001128",
+        "Author": "Urtekram",
+        "TotalTime": "1 døgn",
+        "Tags": [
+          "Diæt",
+          "Hverdag"
+        ],
+        "NumberOfPersons": 4,
+        "AllowedForNumberOfPersons": [
+          1,
+          2
+        ],
+        "SortingList": [
+          {
+            "Title": "Anbefalet",
+            "UrlName": "default",
+            "IsSelected": true
+          },
+          {
+            "Title": "Mest øko",
+            "UrlName": "organic",
+            "IsSelected": false
+          }
+        ]
+      },
+      {
+        "TemplateName": "recipelistitem",
+        "PrimaryImage": "https://nemlig.com/scommerce/images/850x478_hindbaerkoldskaal-ristede-havregryn-NY-98000426.jpg?i={ABB10821-FD25-4A1B-918C-5C6B653EAECF}&v=AFleVfyN",
+        "Id": "3d54f7f9-77f1-472a-a74d-2f8f0a67b6c4",
+        "Name": "Hindbærkoldskål med ristede havregryn",
+        "Url": "/opskrifter/hindbaerkoldskaal-ristede-havregryn-98000426",
+        "Author": "nemlig",
+        "TotalTime": "20 min",
+        "Tags": [
+          "Dessert",
+          "Børnevenlig"
+        ],
+        "NumberOfPersons": 4,
+        "AllowedForNumberOfPersons": [
+          1,
+          2
+        ],
+        "SortingList": [
+          {
+            "Title": "Anbefalet",
+            "UrlName": "default",
+            "IsSelected": true
+          },
+          {
+            "Title": "Mest øko",
+            "UrlName": "organic",
+            "IsSelected": false
+          }
+        ]
+      }
+    ],
+    "Ads": [
+      {
+        "Id": "ebf3b977-a57d-499c-89f8-5b5e2da7dad3",
+        "Name": "2026_S39_E39_513_Dole_RMCID0942_RMPID-711_Searchad_All",
+        "Link": "/dagligvarer/brands/dole",
+        "ImageUrl": "https://nemlig.com//scommerce/images/Search Ad_272x420px.jpg?i=%7BFAF8DD5F-0B4F-4560-B42F-66318F096A62%7D&v=gApAAXAO"
+      },
+      {
+        "Id": "9f43501e-a70b-49a1-a8b6-f5b8c1766619",
+        "Name": "2026_S39_E39_106_Naturmaelk_RMCID0856_RMPID-711_Searchad_All",
+        "Link": "/gaard-specialbutikker/brand-butikker/naturmaelk",
+        "ImageUrl": "https://nemlig.com//scommerce/images/product ad 272 x 420.jpg?i=%7B0C4BAABA-490C-438A-B1C8-2A4A992F7C61%7D&v=AIjdo6EN"
+      }
+    ],
+    "TopUpOrderProducts": {
+      "Products": [
+        {
+          "Score": 100000000.0,
+          "TemplateName": "productlistitem",
+          "PrimaryImage": "https://nemlig.com//scommerce/images/rosiner-oeko.jpg?i=GJpktl69/5062107",
+          "Availability": {
+            "IsDeliveryAvailable": true,
+            "IsAvailableInStock": true,
+            "ReasonMessageKeys": []
+          },
+          "Id": "5062107",
+          "Name": "Rosiner øko.",
+          "Category": "Kolonial",
+          "Brand": "Nordthy",
+          "SubCategory": "Tørret frugt",
+          "Url": "rosiner-oeko-5062107",
+          "UnitPriceCalc": 55.8,
+          "UnitPriceLabel": "kr/kg",
+          "DiscountItem": true,
+          "Description": "250 g / Nordthy",
+          "SaleBeforeLastSalesDate": 90,
+          "Price": 13.95,
+          "Labels": [
+            "Øko (europæisk)",
+            "Discount"
+          ],
+          "Favorite": false,
+          "SearchDescription": [
+            "TØRRET",
+            "FRUGT"
+          ],
+          "ProductSubGroupNumber": "1003500002",
+          "ProductSubGroupName": "Rosiner",
+          "ProductCategoryGroupNumber": "1003500000",
+          "ProductCategoryGroupName": "Tørret frugt, nødder og kerner",
+          "ProductMainGroupNumber": "1000000000",
+          "ProductMainGroupName": "Tørvarer"
+        },
+        {
+          "Score": 99800000.0,
+          "TemplateName": "productlistitem",
+          "PrimaryImage": "https://nemlig.com//scommerce/images/tortilla-20-cm-oeko.jpg?i=lYyyuGqw/5042027",
+          "Availability": {
+            "IsDeliveryAvailable": true,
+            "IsAvailableInStock": true,
+            "ReasonMessageKeys": []
+          },
+          "CampaignAttribute": "Fast mixtilbud",
+          "Id": "5042027",
+          "Name": "Tortilla 20 cm øko.",
+          "Category": "Kolonial",
+          "Brand": "Santa Maria",
+          "SubCategory": "Madbrød",
+          "Url": "tortilla-20-cm-oeko-5042027",
+          "UnitPriceCalc": 49.84,
+          "UnitPriceLabel": "kr/kg",
+          "DiscountItem": true,
+          "Description": "8 stk. / 320 g / Santa Maria - Tex Mex",
+          "SaleBeforeLastSalesDate": 30,
+          "Price": 15.95,
+          "Campaign": {
+            "MinQuantity": 2,
+            "MaxQuantity": 0,
+            "TotalPrice": 30.0,
+            "CampaignPrice": 30.0,
+            "Type": "ProductCampaignBuyXForY",
+            "Code": "KF",
+            "DiscountSavings": -10.86,
+            "IntervalStart": "2026-09-27T22:00:00Z",
+            "IntervalEnd": "2026-10-04T21:59:59Z",
+            "ShowCampaignInterval": false
+          },
+          "Labels": [
+            "Øko (europæisk)",
+            "Discount"
+          ],
+          "Favorite": false,
+          "SearchDescription": [
+            "MADPANDEKAGER",
+            "WRAPS"
+          ],
+          "ProductSubGroupNumber": "1000100010",
+          "ProductSubGroupName": "Mexikansk, tortilla",
+          "ProductCategoryGroupNumber": "1000100000",
+          "ProductCategoryGroupName": "Verdensmad",
+          "ProductMainGroupNumber": "1000000000",
+          "ProductMainGroupName": "Tørvarer"
+        }
+      ],
+      "ProductGroupId": "00000000-0000-0000-0000-000000000000",
+      "Start": 0,
+      "NumFound": 44,
+      "Advertisements": []
+    },
+    "RecipesNumFound": 100,
+    "ProductsNumFound": 14,
+    "SearchQuery": "havregryn",
+    "AdsNumFound": 2
+  }
+}

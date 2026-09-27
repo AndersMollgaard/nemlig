@@ -1,0 +1,6 @@
+.env
+__pycache__/
+research/probe_cookies.pkl
+.venv/
+.pytest_cache/
+.ruff_cache/

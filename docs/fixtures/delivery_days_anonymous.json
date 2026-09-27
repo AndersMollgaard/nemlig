@@ -1,0 +1,120 @@
+{
+  "_note": "GET www/webapi/v2/Delivery/GetDeliveryDays?startDate=undefined&days=2 (anonymous, default zone). Availability: 0 available, 1 past deadline, 2 sold out, 3 not active.",
+  "response": {
+    "DayRangeHours": [
+      {
+        "DayHours": [
+          {
+            "Id": 2395988,
+            "StartHour": 1,
+            "EndHour": 6,
+            "NumberOfHours": 5,
+            "DeliveryPrice": 29.0,
+            "OriginalDeliveryPrice": null,
+            "IsOrHasVipVariantTimeSlot": false,
+            "Deadline": "2026-09-26T15:00:00",
+            "Date": "2026-09-27T00:00:00",
+            "IsEventSlot": false,
+            "IsCheapHour": false,
+            "IsFreeHour": false,
+            "IsSelected": false,
+            "Attributes": [],
+            "Type": 1,
+            "Availability": 1
+          },
+          {
+            "Id": 2395934,
+            "StartHour": 6,
+            "EndHour": 8,
+            "NumberOfHours": 2,
+            "DeliveryPrice": 22.0,
+            "OriginalDeliveryPrice": null,
+            "IsOrHasVipVariantTimeSlot": false,
+            "Deadline": "2026-09-26T16:00:00",
+            "Date": "2026-09-27T00:00:00",
+            "IsEventSlot": false,
+            "IsCheapHour": false,
+            "IsFreeHour": false,
+            "IsSelected": false,
+            "Attributes": [],
+            "Type": 0,
+            "Availability": 1
+          }
+        ],
+        "IsAttendedAvailable": true,
+        "IsUnattendedAvailable": true,
+        "Date": "2026-09-27T00:00:00",
+        "IsCheapDay": false,
+        "IsFreeDayAttended": false,
+        "IsFreeDayUnattended": false,
+        "IsVipDayAttended": false,
+        "IsVipDayUnattended": false,
+        "DeliveryText": "<b>Bestil inden kl. 12:00 for LEVERING I DAG.</b><br/>\r\n        Bestil inden kl. 12.00 for levering i morgen mellem kl. 8.00-13.00.<br/>\r\n        Bestil inden kl. 24.00 for levering fra kl. 13.00 i morgen.<br/>",
+        "IsSelected": false
+      },
+      {
+        "DayHours": [
+          {
+            "Id": 2400693,
+            "StartHour": 1,
+            "EndHour": 6,
+            "NumberOfHours": 5,
+            "DeliveryPrice": 29.0,
+            "OriginalDeliveryPrice": null,
+            "IsOrHasVipVariantTimeSlot": false,
+            "Deadline": "2026-09-27T15:00:00",
+            "Date": "2026-09-28T00:00:00",
+            "IsEventSlot": false,
+            "IsCheapHour": false,
+            "IsFreeHour": false,
+            "IsSelected": false,
+            "Attributes": [],
+            "Type": 1,
+            "Availability": 0
+          },
+          {
+            "Id": 2400911,
+            "StartHour": 5,
+            "EndHour": 7,
+            "NumberOfHours": 2,
+            "DeliveryPrice": 36.0,
+            "OriginalDeliveryPrice": null,
+            "IsOrHasVipVariantTimeSlot": false,
+            "Deadline": "2026-09-27T16:00:00",
+            "Date": "2026-09-28T00:00:00",
+            "IsEventSlot": false,
+            "IsCheapHour": false,
+            "IsFreeHour": false,
+            "IsSelected": false,
+            "Attributes": [],
+            "Type": 0,
+            "Availability": 0
+          }
+        ],
+        "IsAttendedAvailable": true,
+        "IsUnattendedAvailable": true,
+        "Date": "2026-09-28T00:00:00",
+        "IsCheapDay": false,
+        "IsFreeDayAttended": false,
+        "IsFreeDayUnattended": false,
+        "IsVipDayAttended": false,
+        "IsVipDayUnattended": false,
+        "DeliveryText": "Bestil inden kl. 12.00 for levering i morgen mellem kl. 8.00-10.00.\r\n        Bestil inden kl. 24.00 for levering fra kl. 10.00 i morgen. <br />",
+        "IsSelected": false
+      }
+    ],
+    "AnyVisibleAttendedInDeliveryZone": true,
+    "AnyVisibleUnattendedInDeliveryZone": true,
+    "AttendedMinDeliveryPrice": 0.0,
+    "UnattendedMinDeliveryPrice": 19.0,
+    "SelectedTimeSlotId": -1,
+    "SelectedDeliveryTime": "2026-09-27T16:00:00",
+    "IsTimeSlotReserved": false,
+    "DeliveryText": null,
+    "IsReservationLost": false,
+    "PostalDistrictCode": null,
+    "IsWholeDeliveryAvailable": false,
+    "Messages": [],
+    "NextRangeStart": "2026-09-29T00:00:00"
+  }
+}

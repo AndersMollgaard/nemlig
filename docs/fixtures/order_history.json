@@ -1,0 +1,66 @@
+{
+  "_note": "GET www/webapi/order/GetBasicOrderHistory?skip=0&take=2. Use numeric Id for order lines and CopyOrder.",
+  "response": {
+    "Orders": [
+      {
+        "Status": 3,
+        "OrderNumber": "<redacted>",
+        "Total": 496.2,
+        "SubTotal": 504.97,
+        "OrderDate": "21/09-2026 kl. 10-15",
+        "EstimatedArrivalTime": null,
+        "ActualArrivalTime": null,
+        "Id": 10000001,
+        "Buttons": null,
+        "DeliveryStatus": 0,
+        "DeliveryDeadlineDate": "20/09-2026",
+        "DeliveryDeadlineDateTimezoneOffset": 120.0,
+        "DeliveryDeadlineDateTime": "2026-09-20T14:59:00",
+        "DeliveryAddress": "<redacted>",
+        "IsDeliveryOnWay": false,
+        "DeliveryTime": {
+          "Start": "2026-09-21T10:00:00",
+          "End": "2026-09-21T15:00:00"
+        },
+        "DeliveryType": 0,
+        "TimeSlotAttributesTypes": [],
+        "ValidationFailures": null,
+        "IsEditable": false,
+        "IsCancellable": false,
+        "HasInvoice": true,
+        "IsMinimumOrderTotalAchieved": true,
+        "IsDeadlinePassed": true
+      },
+      {
+        "Status": 3,
+        "OrderNumber": "<redacted>",
+        "Total": 937.04,
+        "SubTotal": 910.44,
+        "OrderDate": "11/09-2026 kl. 16-21",
+        "EstimatedArrivalTime": null,
+        "ActualArrivalTime": null,
+        "Id": 10000002,
+        "Buttons": null,
+        "DeliveryStatus": 0,
+        "DeliveryDeadlineDate": "11/09-2026",
+        "DeliveryDeadlineDateTimezoneOffset": 120.0,
+        "DeliveryDeadlineDateTime": "2026-09-10T23:59:00",
+        "DeliveryAddress": "<redacted>",
+        "IsDeliveryOnWay": false,
+        "DeliveryTime": {
+          "Start": "2026-09-11T16:00:00",
+          "End": "2026-09-11T21:00:00"
+        },
+        "DeliveryType": 0,
+        "TimeSlotAttributesTypes": [],
+        "ValidationFailures": null,
+        "IsEditable": false,
+        "IsCancellable": false,
+        "HasInvoice": true,
+        "IsMinimumOrderTotalAchieved": true,
+        "IsDeadlinePassed": true
+      }
+    ],
+    "NumberOfPages": 68
+  }
+}

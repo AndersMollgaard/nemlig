@@ -1,0 +1,126 @@
+{
+  "_note": "GET www/havregryn-finvalsede-oeko-5050406?GetAsJson=1. The product is content[TemplateName=productdetailspot].",
+  "response": {
+    "MetaData": {
+      "Id": "5cf5777c-eeef-4064-8f79-a03cac530dc3",
+      "Name": "Product",
+      "DisplayName": "",
+      "TemplateId": "572463cc-fbfa-4f41-acec-7f3acb9726de",
+      "TemplateName": "Product Page",
+      "Versions": 1,
+      "Language": "da",
+      "ContentPath": "/Site/Product",
+      "FullPath": "/sitecore/content/Site/Product",
+      "Path": "/sitecore/content/Site/Product",
+      "AbsolutePath": "/havregryn-finvalsede-oeko-5050406",
+      "Url": "https://www.nemlig.com/havregryn-finvalsede-oeko-5050406",
+      "Header": "SOME TEST HEADER",
+      "PageTitle": "Havregryn (finvalsede) øko. fra Go' Morgen – Leveret med nemlig.com",
+      "MetaKeyWords": "$name",
+      "MetaDescription": "Køb Havregryn (finvalsede) øko. fra Go' Morgen og flere tusind andre dagligvarer hos nemlig.com. Levering direkte til døren, nemt og ligetil.",
+      "RepeatBackgroundImage": false,
+      "BackgroundColor": "",
+      "CategoryPath": "1000000000#Tørvarer;1001700000#Morgenmad;1001700006#Gryn, morgenmad",
+      "BackgroundImageForJson": null,
+      "ResponseCode": 200,
+      "SocialMediaImage": {
+        "Id": "45135c06-bc46-4577-a629-990f0c6b374b"
+      },
+      "PageType": "regular",
+      "NavigationTitle": "Havregryn (finvalsede) øko.",
+      "IncludeInNavigation": false,
+      "IncludeInSitemap": false,
+      "TopAdvertisement": null,
+      "LeftAdvertisement": null,
+      "MenuContextId": "93a6c80f-ee30-4b97-a1a2-8d7afdf3c45d",
+      "TrackingId": "5050406",
+      "AuthenticationRequired": false
+    },
+    "productdetailspot": {
+      "TemplateName": "productdetailspot",
+      "Text": "<h6>Økologiske havregryn</h6>\n<p>Go'Morgens økologiske finvalsede havregryn passer lige til din daglige morgenmad. Disse havregryn er finvalsede, hvilket giver en blød og cremet konsistens der gør dem nemme at tilberede og nyde, når du f.eks. laver havregrød.</p>\n<p>Produktet er økologisk og bærer b…",
+      "Attributes": [
+        {
+          "Key": "Egnet til",
+          "Value": [
+            "Morgenmad"
+          ]
+        },
+        {
+          "Key": "Allergener",
+          "Value": [
+            "Gluten",
+            "Havre"
+          ]
+        }
+      ],
+      "Media": [
+        {
+          "AltText": "Havregryn (finvalsede) øko.",
+          "MediaType": "image",
+          "Url": "https://www.nemlig.com/scommerce/images/havregryn-finvalsede-oeko.jpg?i=XgsCh03M/5050406"
+        }
+      ],
+      "Declarations": {
+        "ShowDeclarations": false,
+        "EnergyKcal": "0",
+        "EnergyKj": "0",
+        "NutritionalContentProtein": "0",
+        "ProteinAcceptanceCriteria": 0,
+        "NutritionalContentFat": "0",
+        "FatAcceptanceCriteria": 0,
+        "NutritionalContentCarbohydrate": "0",
+        "CarbohydrateAcceptanceCriteria": 0,
+        "SaturatedFattyAcid": "0",
+        "SaturatedFattyAcidAcceptanceCriteria": 0,
+        "Sugar": "0",
+        "SugarAcceptanceCriteria": 0,
+        "Salt": "0",
+        "SaltAcceptanceCriteria": 0,
+        "DietaryFiber": "0",
+        "DietaryFiberAcceptanceCriteria": 0
+      },
+      "DeclarationLabel": "<p>Økologiske finvalsede HAVREGRYN.</p><br /><br /><table><thead><tr><td align=\"left\"><b>N&#230;ringsindhold pr. 100 g</b></td><td align=\"right\"></td></tr></thead><tbody><tr><td align=\"left\">Energi</td><td align=\"right\">1545 kJ / 369 kcal\n</td></tr><tr><td align=\"left\">Fedt</td><td align=\"right\">6.9…",
+      "DiscountSavings": 0.0,
+      "Availability": {
+        "IsDeliveryAvailable": true,
+        "IsAvailableInStock": true,
+        "ReasonMessageKeys": []
+      },
+      "VkNumber": "",
+      "Traceability": "",
+      "TechnicalDescription": "",
+      "CountryControlCode": "DK-ØKO-100",
+      "OriginCodeDescription": "EU/Ikke-EU-jordbrug",
+      "PrimaryImage": "https://www.nemlig.com/scommerce/images/havregryn-finvalsede-oeko.jpg?i=XgsCh03M/5050406",
+      "Id": "5050406",
+      "Name": "Havregryn (finvalsede) øko.",
+      "Category": "Kolonial",
+      "Brand": "Go' Morgen",
+      "SubCategory": "Gryn",
+      "Url": "havregryn-finvalsede-oeko-5050406",
+      "UnitPrice": "9,95 kr./Kg.",
+      "UnitPriceCalc": 9.95,
+      "UnitPriceLabel": "kr./Kg.",
+      "DiscountItem": true,
+      "Description": "1 kg / Go' Morgen",
+      "SaleBeforeLastSalesDate": 90,
+      "Price": 9.95,
+      "Campaign": null,
+      "Labels": [
+        "Øko (dansk)",
+        "Øko (europæisk)"
+      ],
+      "Favorite": false,
+      "SearchDescription": [
+        "HAVREGRYN"
+      ],
+      "ProductSubGroupNumber": "1001700006",
+      "ProductSubGroupName": "Gryn, morgenmad",
+      "ProductCategoryGroupNumber": "1001700000",
+      "ProductCategoryGroupName": "Morgenmad",
+      "ProductMainGroupNumber": "1000000000",
+      "ProductMainGroupName": "Tørvarer"
+    }
+  }
+}

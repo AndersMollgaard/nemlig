@@ -1,0 +1,20 @@
+{
+  "_note": "GET gw/searchgateway/api/quick?query=havre",
+  "response": {
+    "SearchQuery": "havre",
+    "Categories": [
+      {
+        "Name": "Grød - morgenmad og brunch opskrifter",
+        "Url": "/opskrifter/morgenmad-brunch/groed"
+      },
+      {
+        "Name": "Müsli",
+        "Url": "/dagligvarer/kolonial/morgenmad/musli-granola"
+      }
+    ],
+    "Suggestions": [
+      "havre",
+      "havregryn"
+    ]
+  }
+}

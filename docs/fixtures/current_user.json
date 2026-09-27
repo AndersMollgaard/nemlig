@@ -1,0 +1,17 @@
+{
+  "_note": "GET www/webapi/user/GetCurrentUser (cookie only).",
+  "response": {
+    "DebitorId": "<redacted>",
+    "Email": "<redacted>",
+    "MemberType": 0,
+    "MessageToDriver": "<redacted>",
+    "DeliveryAddress": "<redacted>",
+    "InvoiceAddress": "<redacted>",
+    "DriverInformation": "<redacted>",
+    "DefaultDeliveryType": 0,
+    "AddressesAreEqual": true,
+    "EAN": "",
+    "CVR": "",
+    "UpcomingOrder": null
+  }
+}
