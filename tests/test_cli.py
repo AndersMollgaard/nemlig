@@ -62,6 +62,22 @@ def test_search_text(api, anonymous, capsys):
     assert lines[1].startswith("5050406  ") and " kr" in lines[1]
 
 
+def test_search_several_queries(api, anonymous, capsys):
+    def respond(request):
+        data = {**fixture("search.json"), "SearchQuery": request.url.params["query"]}
+        return httpx.Response(200, json=data)
+
+    search = api.get(f"{GW}/searchgateway/api/search").mock(side_effect=respond)
+    code, out, _ = run(capsys, "search", "mælk", "hakket oksekød", "--limit", "2")
+    assert code == 0
+    assert search.call_count == 2
+    assert [r["query"] for r in json.loads(out)] == ["mælk", "hakket oksekød"]
+
+    code, out, _ = run(capsys, "--text", "search", "mælk", "æg")
+    heads = [line for line in out.splitlines() if "results for" in line]
+    assert [h.split("results for ")[1] for h in heads] == ["'mælk'", "'æg'"]
+
+
 def test_basket_add_several_items(api, customer, add_route, capsys):
     code, out, _ = run(capsys, "basket", "add", "111:2", "222")
     assert code == 0

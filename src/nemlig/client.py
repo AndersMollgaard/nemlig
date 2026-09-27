@@ -6,7 +6,8 @@ import os
 import re
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,9 @@ from .models.basket import validation_failures
 from .session import SessionStore, user_key
 
 ProductId = str | int
+
+# Concurrent requests for search_many(); enough for a shopping list, gentle on the site.
+MAX_PARALLEL_SEARCHES = 8
 
 # The anonymous delivery context depends on the time of day, so refetch it now and then.
 CONTEXT_TTL = 600
@@ -196,20 +200,37 @@ class NemligClient:
 
     def search(self, query: str, limit: int = 20, offset: int = 0) -> SearchResult:
         """Search products. Prices and stock are for the current delivery zone and slot."""
+        return self.search_many([query], limit=limit, offset=offset)[0]
+
+    def search_many(self, queries: Sequence[str], limit: int = 20, offset: int = 0) -> list[SearchResult]:
+        """Run several searches at once and return the results in the order of ``queries``.
+
+        The session and delivery context are resolved once, up front. The searches then run in
+        parallel threads that only send GETs over the shared connection pool and touch no client
+        state. If any search fails, the error is raised.
+        """
         ctx = self.get_delivery_context()
-        data = self._http.get(
-            f"{GW}/searchgateway/api/search",
-            headers=self._bearer(),
-            params={
-                "query": query,
-                "take": limit,
-                "skip": offset,
-                "timeslotUtc": ctx.timeslot_utc,
-                "deliveryZoneId": ctx.zone_id,
-                "TimeSlotId": ctx.slot_id,
-            },
-        )
-        return SearchResult.from_api(data or {}, query)
+        headers = self._bearer()
+
+        def one(query: str) -> SearchResult:
+            data = self._http.get(
+                f"{GW}/searchgateway/api/search",
+                headers=headers,
+                params={
+                    "query": query,
+                    "take": limit,
+                    "skip": offset,
+                    "timeslotUtc": ctx.timeslot_utc,
+                    "deliveryZoneId": ctx.zone_id,
+                    "TimeSlotId": ctx.slot_id,
+                },
+            )
+            return SearchResult.from_api(data or {}, query)
+
+        if len(queries) <= 1:
+            return [one(q) for q in queries]
+        with ThreadPoolExecutor(max_workers=min(len(queries), MAX_PARALLEL_SEARCHES)) as pool:
+            return list(pool.map(one, queries))
 
     def suggest(self, query: str) -> Suggestions:
         """Autocomplete: search-term suggestions and matching categories."""

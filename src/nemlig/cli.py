@@ -47,6 +47,7 @@ DESCRIPTION = "Search nemlig.com and manage the basket. Unofficial; checkout is 
 EPILOG = """\
 typical flow:
   nemlig search "havregryn" --limit 5     pick a product "id" from the results
+  nemlig search mælk "hakket oksekød" æg   several queries in parallel: a list of results
   nemlig basket add 5050406:2 5043017      add 2 of one product and 1 of another
   nemlig basket                            show the basket and its totals
 
@@ -133,7 +134,8 @@ def _confirm(args: argparse.Namespace, what: str) -> None:
 
 
 def cmd_search(nc: NemligClient, a: argparse.Namespace) -> Any:
-    return nc.search(a.query, limit=a.limit, offset=a.offset)
+    results = nc.search_many(a.queries, limit=a.limit, offset=a.offset)
+    return results[0] if len(results) == 1 else results
 
 
 def cmd_suggest(nc: NemligClient, a: argparse.Namespace) -> Any:
@@ -286,9 +288,9 @@ def build_parser() -> argparse.ArgumentParser:
         sp.set_defaults(func=func)
         return sp
 
-    sp = cmd(sub, "search", cmd_search, "search products")
-    sp.add_argument("query")
-    sp.add_argument("--limit", type=int, default=10, help="products per page (default 10)")
+    sp = cmd(sub, "search", cmd_search, "search products; several queries run in parallel")
+    sp.add_argument("queries", nargs="+", metavar="QUERY", help="one or more queries (quote multi-word ones)")
+    sp.add_argument("--limit", type=int, default=10, help="products per query (default 10)")
     sp.add_argument("--offset", type=int, default=0, help="products to skip, for paging")
 
     sp = cmd(sub, "suggest", cmd_suggest, "autocomplete: search terms and categories")

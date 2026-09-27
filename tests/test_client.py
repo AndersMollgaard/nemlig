@@ -37,6 +37,31 @@ def test_search_uses_the_basket_delivery_context(api, customer, basket_route):
     assert basket_route.call_count == 1  # context is cached
 
 
+def test_search_many_keeps_query_order_and_resolves_context_once(api, customer, basket_route):
+    def respond(request):
+        data = {**fixture("search.json"), "SearchQuery": request.url.params["query"]}
+        return httpx.Response(200, json=data)
+
+    search = api.get(f"{GW}/searchgateway/api/search").mock(side_effect=respond)
+    queries = ["a", "bb", "ccc", "æg", "mælk"]
+    results = customer.search_many(queries, limit=5)
+    assert [r.query for r in results] == queries
+    assert search.call_count == len(queries)
+    assert basket_route.call_count == 1
+    assert {c.request.url.params["TimeSlotId"] for c in search.calls} == {"2403209"}
+
+
+def test_search_many_raises_when_one_query_fails(api, customer, basket_route):
+    def respond(request):
+        if request.url.params["query"] == "bad":
+            return httpx.Response(400, json={"ErrorCode": 1, "ErrorMessage": "nope"})
+        return httpx.Response(200, json=fixture("search.json"))
+
+    api.get(f"{GW}/searchgateway/api/search").mock(side_effect=respond)
+    with pytest.raises(ApiError):
+        customer.search_many(["ok", "bad", "ok2"])
+
+
 def test_anonymous_search_uses_bootstrap_context(api, anonymous):
     search = api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
     anonymous.search("havregryn")

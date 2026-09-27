@@ -62,7 +62,7 @@ driver notes, order numbers) is never mapped into the models.
 | Area | Methods |
 | --- | --- |
 | Session | `login()`, `logout()`, `is_logged_in()`, `get_account()`, `get_delivery_context()` |
-| Search | `search(query, limit, offset)`, `suggest(query)`, `get_product(id_or_slug)` |
+| Search | `search(query, limit, offset)`, `search_many(queries, limit, offset)` (parallel), `suggest(query)`, `get_product(id_or_slug)` |
 | Basket | `get_basket()`, `add_to_basket(id, qty)` (additive, negative subtracts), `set_quantity(id, qty)` (absolute), `remove_from_basket(id)`, `remove_sold_out()`, `clear_basket()` |
 | Delivery | `get_delivery_days(days, start)`, `reserve_slot(slot_id)` |
 | Orders | `get_orders(limit, page)`, `get_order(order_id)`, `reorder(order_id)` |
@@ -94,6 +94,7 @@ workflow. Add `--text` for a compact human view.
 
 ```sh
 nemlig search "havregryn" --limit 5       # pick a product "id" from the results
+nemlig --text search mælk æg "rugbrød"    # several queries, run in parallel
 nemlig basket add 5050406:2 5043017        # add 2 of one product and 1 of another
 nemlig basket set 5050406:1                # absolute quantity; 0 removes
 nemlig --text basket                       # lines, totals, minimum order, delivery slot
@@ -101,7 +102,7 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 
 | Command | What |
 | --- | --- |
-| `search QUERY [--limit] [--offset]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products |
+| `search QUERY... [--limit] [--offset]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list |
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
 | `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots |
 | `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID` | Order history |
@@ -119,6 +120,21 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 - **Credentials** come from `NEMLIG_USER` / `NEMLIG_PASS` in the environment, `--env-file`
   (or `NEMLIG_ENV_FILE`), `./.env`, or `~/.config/nemlig/.env`, in that order. The session is
   saved as with the library; `--no-session` turns that off.
+
+## Agents
+
+`AGENTS.md` (imported by `CLAUDE.md`) is the brief for coding agents. The skill
+[`.claude/skills/nemlig-shopping`](.claude/skills/nemlig-shopping/SKILL.md) is the shopping
+playbook: compact `--text` output, one multi-query `search` and one `basket add` per batch, how to choose
+products, and how to recover from errors. Claude Code picks it up automatically inside this repo.
+
+To shop from any directory, install the command and the skill for your user:
+
+```sh
+uv tool install --editable .                       # puts `nemlig` on PATH
+ln -s "$PWD/.claude/skills/nemlig-shopping" ~/.claude/skills/nemlig-shopping
+cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
+```
 
 ## Tests
 
