@@ -170,3 +170,17 @@ models are already trimmed for an LLM's context. It would likely ship as an opti
 
 `NEMLIG_USER` and `NEMLIG_PASS` go in `.env` in the repo root. It is listed in `.gitignore`;
 never commit it.
+
+## Acknowledgements
+
+Nemlig has no public API. These community projects documented it first, and this client builds on
+what they worked out:
+
+- [eisbaw/nemlig_cli](https://github.com/eisbaw/nemlig_cli): the API notes (`nemlig_api.md`) that
+  laid out the login flow, both hosts and the basket semantics.
+- [emilbm/nemlig-mcp](https://github.com/emilbm/nemlig-mcp): the session model, including the
+  customer id in the JWT and expired sessions that silently fall back to anonymous.
+- [mikkelkaas/nemligmcp](https://github.com/mikkelkaas/nemligmcp): the search context, the delivery
+  slot endpoints and the Queue-it user-agent pitfall.
+- [tobiasdosdal/Nemlig.com-CLI](https://github.com/tobiasdosdal/Nemlig.com-CLI): the current client
+  version header, retrying only reads, and cookie-based session persistence.
