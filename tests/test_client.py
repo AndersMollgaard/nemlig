@@ -70,6 +70,34 @@ def test_anonymous_search_uses_bootstrap_context(api, anonymous):
     assert "TimeSlotId" not in p
 
 
+@pytest.fixture
+def days_route(api):
+    return api.get(f"{WWW}/webapi/v2/Delivery/GetDeliveryDays").respond(
+        json=fixture("delivery_days_anonymous.json")
+    )
+
+
+def test_search_for_another_slot(api, customer, basket_route, days_route):
+    search = api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
+    customer.search_many(["a", "b"], slot_id=2400911)  # 28/09 05-07, deadline 27/09 16:00
+    assert days_route.call_count == 1
+    p = params(search)
+    assert (p["timeslotUtc"], p["deliveryZoneId"], p["TimeSlotId"]) == ("2026092803-120-780", "4", "2400911")
+
+
+def test_offers_for_another_slot(api, customer, basket_route, days_route):
+    route = api.get(f"{GW}/productbff/api/web/page").respond(json=fixture("productbff_favourites.json"))
+    assert customer.get_offers(limit=3, slot_id=2400911)
+    assert params(route) == {"path": "/tilbud", "timeslotId": "2400911"}
+    customer.get_offers(limit=3)
+    assert params(route) == {"path": "/tilbud", "timeslotId": "2403209"}
+
+
+def test_unknown_slot_is_rejected(api, customer, basket_route, days_route):
+    with pytest.raises(ValueError, match="no delivery slot 1 "):
+        customer.search("mælk", slot_id=1)
+
+
 def test_get_product_by_id_uses_redirecting_path(api, anonymous):
     api.get(f"{WWW}/p-5050406").respond(301, headers={"Location": "/havregryn-finvalsede-oeko-5050406"})
     page = {"content": [{"TemplateName": "ribbon"}, fixture("product_details.json")["productdetailspot"]]}

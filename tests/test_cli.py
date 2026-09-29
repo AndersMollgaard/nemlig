@@ -153,6 +153,18 @@ def test_delivery_available_filter(api, customer, capsys):
     assert all(s["availability"] == 0 for s in open_slots)
 
 
+def test_search_and_offers_take_a_slot(api, anonymous, capsys):
+    api.get(f"{WWW}/webapi/v2/Delivery/GetDeliveryDays").respond(json=fixture("delivery_days_anonymous.json"))
+    search = api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
+    offers = api.get(f"{GW}/productbff/api/web/page").respond(json=fixture("productbff_favourites.json"))
+    assert run(capsys, "search", "mælk", "--slot", "2400911")[0] == 0
+    assert search.calls.last.request.url.params["timeslotUtc"] == "2026092803-120-780"
+    assert run(capsys, "offers", "--slot", "2400911")[0] == 0
+    assert offers.calls.last.request.url.params["timeslotId"] == "2400911"
+    code, _, err = run(capsys, "offers", "--slot", "1")
+    assert code == 2 and "no delivery slot 1" in err
+
+
 def test_status_anonymous(api, anonymous, capsys):
     code, out, _ = run(capsys, "status")
     assert code == 0

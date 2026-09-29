@@ -61,11 +61,11 @@ driver notes, order numbers) is never mapped into the models.
 | Area | Methods |
 | --- | --- |
 | Session | `login()`, `logout()`, `is_logged_in()`, `get_account()`, `get_delivery_context()` |
-| Search | `search(query, limit, offset)`, `search_many(queries, limit, offset)` (parallel), `suggest(query)`, `get_product(id_or_slug)` |
+| Search | `search(query, limit, offset, slot_id)`, `search_many(queries, limit, offset, slot_id)` (parallel), `suggest(query)`, `get_product(id_or_slug)` |
 | Basket | `get_basket()`, `add_to_basket(id, qty)` (additive, negative subtracts), `set_quantity(id, qty)` (absolute), `remove_from_basket(id)`, `remove_sold_out()`, `clear_basket()` |
-| Delivery | `get_delivery_days(days, start)`, `reserve_slot(slot_id)` |
+| Delivery | `get_delivery_days(days, start)`, `reserve_slot(slot_id)`, `get_slot_context(slot_id)` |
 | Orders | `get_orders(limit, page)`, `get_order(order_id)`, `reorder(order_id)` |
-| Favourites and offers | `get_favourites()`, `get_offers(limit)` |
+| Favourites and offers | `get_favourites()`, `get_offers(limit, slot_id)` |
 | Shopping lists | `get_shopping_lists()`, `get_shopping_list(id)`, `create_shopping_list(name)`, `set_shopping_list_item(list_id, product_id, qty)`, `delete_shopping_list(id)`, `add_shopping_list_to_basket(id)` |
 
 Behaviour worth knowing:
@@ -82,8 +82,10 @@ Behaviour worth knowing:
   keeps the session in memory only. It is written with mode 600, and records a hash of the
   username so a client with credentials never reuses another account's session.
 - **Not thread-safe.** Use one client per thread.
-- `clear_basket()` and `reserve_slot()` follow other clients' usage and read the basket back
-  afterwards, but have not been exercised against the real site.
+- **Prices and offers depend on the delivery slot.** Search and offers use the basket's slot
+  (with none chosen, nemlig picks the earliest), or the site's default when anonymous. Pass
+  `slot_id` to price them for another slot without reserving it.
+- `clear_basket()` empties the lines but keeps the reserved slot. Nothing releases a slot.
 
 ## CLI
 
@@ -101,11 +103,11 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 
 | Command | What |
 | --- | --- |
-| `search QUERY... [--limit] [--offset]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list |
+| `search QUERY... [--limit] [--offset] [--slot]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list |
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
 | `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots |
 | `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID` | Order history |
-| `favourites`, `offers [--limit]` | Favourites and offers |
+| `favourites`, `offers [--limit] [--slot]` | Favourites and offers |
 | `lists`, `lists show ID`, `lists create NAME`, `lists set LIST_ID ID:QTY...`, `lists delete ID --yes`, `lists to-basket ID` | Shopping lists |
 | `status`, `login`, `logout` | Session |
 

@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime, time
 from enum import IntEnum
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from ._base import Model, html_to_text, money, parse_date, parse_datetime
+
+# Slot dates, hours and deadlines are Danish local time.
+DANISH_TIME = ZoneInfo("Europe/Copenhagen")
 
 
 class DeliveryContext(Model):
     """What search and productbff need to price products and check stock.
 
-    ``timeslot_utc`` is an opaque string like ``"2026092909-120-1260"``. It comes from the logged-in
-    basket, or from the site's bootstrap settings for anonymous use.
+    ``timeslot_utc`` is a string like ``"2026092909-120-1260"`` (see `DeliverySlot.timeslot_utc`).
+    It comes from the logged-in basket, from the site's bootstrap settings for anonymous use, or
+    from a delivery slot (`NemligClient.get_slot_context`).
     """
 
     timeslot_utc: str
@@ -45,6 +50,21 @@ class DeliverySlot(Model):
     @property
     def is_available(self) -> bool:
         return self.availability == SlotAvailability.AVAILABLE
+
+    @property
+    def timeslot_utc(self) -> str | None:
+        """The slot as search's ``timeslotUtc``: start hour in UTC, length, and ordering lead time.
+
+        ``"2026100605-60-1020"`` is 07-08 Danish time on 6 October: one hour, with the deadline
+        1020 minutes before the start. The format was worked out from the basket's values.
+        """
+        if self.deadline is None:
+            return None
+        start = datetime.combine(self.date, time(self.start_hour), DANISH_TIME)
+        deadline = self.deadline.replace(tzinfo=DANISH_TIME)
+        length = (self.end_hour - self.start_hour) * 60
+        lead = round((start - deadline).total_seconds() / 60)
+        return f"{start.astimezone(UTC):%Y%m%d%H}-{length}-{lead}"
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> DeliverySlot:

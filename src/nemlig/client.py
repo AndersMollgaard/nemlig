@@ -44,6 +44,8 @@ MAX_PARALLEL_SEARCHES = 8
 
 # The anonymous delivery context depends on the time of day, so refetch it now and then.
 CONTEXT_TTL = 600
+# How far ahead get_slot_context looks for a slot id.
+SLOT_LOOKUP_DAYS = 30
 # GetShoppingLists page size.
 LISTS_PAGE = 50
 
@@ -186,6 +188,22 @@ class NemligClient:
         assert self._context is not None
         return self._context
 
+    def get_slot_context(self, slot_id: int) -> DeliveryContext:
+        """The delivery context of any slot in the next month (``DeliverySlot.id``).
+
+        Search and offers priced with it show that slot's prices and offers, without reserving it.
+        Raises ``ValueError`` when the slot is not in the delivery days.
+        """
+        zone_id = self.get_delivery_context().zone_id
+        for day in self.get_delivery_days(days=SLOT_LOOKUP_DAYS):
+            for slot in day.slots:
+                if slot.id == int(slot_id) and slot.timeslot_utc:
+                    return DeliveryContext(timeslot_utc=slot.timeslot_utc, zone_id=zone_id, slot_id=slot.id)
+        raise ValueError(f"no delivery slot {slot_id} in the next {SLOT_LOOKUP_DAYS} days")
+
+    def _context_for(self, slot_id: int | None) -> DeliveryContext:
+        return self.get_delivery_context() if slot_id is None else self.get_slot_context(slot_id)
+
     def _set_context(self, context: DeliveryContext | None) -> None:
         if context is not None:
             self._context = context
@@ -198,18 +216,23 @@ class NemligClient:
 
     # -- search and products ------------------------------------------------------------------
 
-    def search(self, query: str, limit: int = 20, offset: int = 0) -> SearchResult:
-        """Search products. Prices and stock are for the current delivery zone and slot."""
-        return self.search_many([query], limit=limit, offset=offset)[0]
+    def search(
+        self, query: str, limit: int = 20, offset: int = 0, slot_id: int | None = None
+    ) -> SearchResult:
+        """Search products. Prices and stock are for the current delivery zone and slot, or for
+        ``slot_id`` (see `get_slot_context`)."""
+        return self.search_many([query], limit=limit, offset=offset, slot_id=slot_id)[0]
 
-    def search_many(self, queries: Sequence[str], limit: int = 20, offset: int = 0) -> list[SearchResult]:
+    def search_many(
+        self, queries: Sequence[str], limit: int = 20, offset: int = 0, slot_id: int | None = None
+    ) -> list[SearchResult]:
         """Run several searches at once and return the results in the order of ``queries``.
 
         The session and delivery context are resolved once, up front. The searches then run in
         parallel threads that only send GETs over the shared connection pool and touch no client
         state. If any search fails, the error is raised.
         """
-        ctx = self.get_delivery_context()
+        ctx = self._context_for(slot_id)
         headers = self._bearer()
 
         def one(query: str) -> SearchResult:
@@ -312,7 +335,7 @@ class NemligClient:
         return basket
 
     def clear_basket(self) -> Basket:
-        """Empty the basket. This also drops the reserved delivery slot."""
+        """Empty the basket. The reserved delivery slot stays reserved."""
         self._require_login()
         self._http.post(f"{WWW}/webapi/basket/ClearBasket")
         return self.get_basket()
@@ -388,15 +411,17 @@ class NemligClient:
     def get_favourites(self) -> list[Product]:
         """The account's favourite products."""
         self._require_login()
-        return self._productbff_page("/favoritter")
+        return self._productbff_page("/favoritter", self.get_delivery_context())
 
-    def get_offers(self, limit: int | None = None) -> list[Product]:
-        """Current offers. The full list is over a thousand products; ``limit`` trims it."""
-        products = self._productbff_page("/tilbud")
+    def get_offers(self, limit: int | None = None, slot_id: int | None = None) -> list[Product]:
+        """Offers for the current delivery slot, or for ``slot_id`` (see `get_slot_context`).
+
+        Offers change from slot to slot. The full list is over a thousand products; ``limit`` trims it.
+        """
+        products = self._productbff_page("/tilbud", self._context_for(slot_id))
         return products[:limit] if limit is not None else products
 
-    def _productbff_page(self, path: str) -> list[Product]:
-        ctx = self.get_delivery_context()
+    def _productbff_page(self, path: str, ctx: DeliveryContext) -> list[Product]:
         data = self._http.get(
             f"{GW}/productbff/api/web/page",
             headers=self._bearer(),

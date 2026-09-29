@@ -135,10 +135,10 @@ Example responses: see [`fixtures/`](fixtures/).
 | --- | --- | --- | --- | --- |
 | Bootstrap context | `GET www/?GetAsJson=1` | None | Returns `Settings.TimeslotUtc`, `DeliveryZoneId`, `CombinedProductsAndSitecoreTimestamp`, `SitecorePublishedStamp`, `UserId` | Probed |
 | Site routes and stamps | `GET www/webapi/v2/AppSettings/Website` | None | 49 keys, such as `BasketPageUrl` and the timestamps | Probed |
-| Product search | `GET gw/searchgateway/api/search` | Bearer | `query`, `take`, `skip`, **`timeslotUtc` and `deliveryZoneId` required** (500 without them), optional `timestamp`, `recipeCount`, `includeFavorites`, `TimeSlotId` | Tested |
+| Product search | `GET gw/searchgateway/api/search` | Bearer | `query`, `take`, `skip`, **`timeslotUtc` and `deliveryZoneId` required** (500 without them), optional `timestamp`, `recipeCount`, `includeFavorites`, `TimeSlotId`. Prices and deals follow `timeslotUtc` (see gotchas) | Tested |
 | Autocomplete | `GET gw/searchgateway/api/quick` | Bearer | `query`, `correlationId` | Probed |
 | Product details | `GET www/<product-slug>?GetAsJson=1` | None | Slug from search `Url`; data in `content[TemplateName=productdetailspot]` | Probed |
-| Offers and favourites | `GET gw/productbff/api/web/page` | Bearer (customer JWT for favourites) | `path` (`/tilbud`, `/favoritter`), **`timeslotId` must be a valid slot id** | Tested (`/tilbud` returned 2 MB) |
+| Offers and favourites | `GET gw/productbff/api/web/page` | Bearer (customer JWT for favourites) | `path` (`/tilbud`, `/favoritter`), `timeslotId`. Offers follow `timeslotId`, not the reserved slot | Tested (`/tilbud` returned 2 MB) |
 | Delivery slots | `GET www/webapi/v2/Delivery/GetDeliveryDays` | None (default zone) or cookie | `startDate` (`undefined` means today), `days`, `showForSubscriptions`. Slot `Availability`: 0 = available, 1 = past deadline, 2 = sold out, 3 = not active | Probed |
 | Reserve slot | `POST www/webapi/Delivery/TryUpdateDeliveryTime?timeslotId=` | Cookie | `UpdateDeliveryTime` forces the change; the response has `IsReserved` | Repos |
 | Current user | `GET www/webapi/user/GetCurrentUser` | Cookie | Returns `DebitorId`, `Email`, addresses, `UpcomingOrder`. There is no `IsLoggedIn` field | Tested |
@@ -146,7 +146,7 @@ Example responses: see [`fixtures/`](fixtures/).
 | Set line quantity | `POST www/webapi/basket/AddToBasket` | Cookie | `{ProductId, quantity, AffectPartialQuantity, disableQuantityValidation}`. Quantity is **absolute**, 0 removes. Returns the full basket | Tested |
 | Add on top of the current quantity | Same endpoint, `{productId, quantity, addToExisting: true}` | Cookie | **Adds.** 1 + 2 = 3, then +1 = 4. A negative quantity subtracts (3 − 1 = 2) | Tested |
 | Remove a quantity-0 line | Same endpoint, `{ProductId, quantity: 0, AffectPartialQuantity: true}` | Cookie | Needed for sold-out lines left at quantity 0 (see gotchas) | Tested |
-| Clear basket | `POST www/webapi/basket/ClearBasket` | Cookie | Also drops the reserved slot | Repos (not tested) |
+| Clear basket | `POST www/webapi/basket/ClearBasket` | Cookie | Empties the lines. **The reserved slot stays reserved** | Tested |
 | Order history | `GET www/webapi/order/GetBasicOrderHistory?skip&take` | Cookie | Numeric `Id` and `OrderNumber` per order. Delivered orders showed `Status: 3` | Tested |
 | Order lines | `GET www/webapi/v2/order/GetOrderHistory/{Id}` | Cookie | `Lines[].ProductNumber` works as a basket product id | Tested |
 | Latest order | `GET www/webapi/order/GetLatestOrderHistory` | Cookie | `includeCanceled` | Repos |
@@ -264,8 +264,22 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
   pages, and the site sends `skip=0` for the first page. With one list, `take=1&skip=1` is empty
   but `take=2&skip=1` still returns it, so the server seems to round `skip` down to a page
   boundary. `NumberOfPages` is 0 on an empty page.
-- **productbff without `timeslotId`:** `/favoritter` (logged in) and `/tilbud` (anonymous)
-  both return 200 without it, contrary to the note in the endpoint table.
+- **Offers and deals depend on the delivery slot** (tested 2026-09-29). With 30/09 16-17 and
+  06/10 07-08 reserved in turn, about 1130 of about 1400 `/tilbud` products appeared for only one
+  of the two slots, and 132 changed price or deal. Search deals changed too ("3 for 38 kr" became
+  "3 for 50 kr"), while search `Price` stayed the same.
+- **productbff reads the slot from `timeslotId` alone.** With 30/09 reserved, `timeslotId` of
+  06/10 returned exactly 06/10's offers. Without `timeslotId`, `/tilbud` and `/favoritter` still
+  return 200 but use the default slot, so leaving it out silently gives the wrong offers.
+- **Search reads the slot from `timeslotUtc`.** `TimeSlotId` alone does not move it: with 30/09's
+  `timeslotUtc` and 06/10's `TimeSlotId`, results matched neither slot, and 06/10's `timeslotUtc`
+  without any `TimeSlotId` matched 06/10 exactly. `timeslotUtc` can be built from a
+  `GetDeliveryDays` slot: `2026100605-60-1020` is the slot start as a UTC `yyyyMMddHH`, its length
+  in minutes, and the minutes from the ordering `Deadline` to the start (slot hours and deadlines
+  are Danish time). That matched every value the basket and bootstrap returned. Whether the lead
+  time counts real minutes or wall-clock minutes across a DST change is unknown.
+- **The basket always has a slot.** With no slot chosen, `DeliveryTimeSlot` is the earliest
+  one, with `Reserved: false`, and `TimeslotUtc` matches it.
 - **Offers:** `/tilbud` returned 1613 products in 15 sections, 1331 unique.
 - **`Campaign` on search products** is a deal, not a discounted `Price`: `{CampaignPrice: 50,
   MinQuantity: 3, Type: "ProductCampaignMixOffer"}` means 3 for 50 kr. `Price` stays the
@@ -273,9 +287,10 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
 - **Shopping lists:** `CreateShoppingList` returns the new list. `UpdateProductInShoppingList`
   returns `{List: {…}}`, and amount 0 removes the product. `RemoveShoppingList` returns an empty
   200. A missing list gives `400 {ErrorCode: 2}`.
-- **`ClearBasket` and `TryUpdateDeliveryTime`** are body-less POSTs in other clients. Their
-  responses are not documented anywhere, so the client reads the basket back after both. Still
-  untested live.
+- **`ClearBasket` and `TryUpdateDeliveryTime`** are body-less POSTs. The client reads the basket
+  back after both. Tested 2026-09-29: `TryUpdateDeliveryTime` reserved the slot, and
+  `ClearBasket` on an empty basket left the reservation in place (other clients say it drops it).
+  There is no known call that releases a reservation.
 
 ## Sources
 

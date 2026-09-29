@@ -55,7 +55,8 @@ notes:
   basket add is additive (running it twice adds twice); basket set is absolute (0 removes).
   After an error or a timeout, check `nemlig basket` and use `basket set` rather than
   repeating `basket add`.
-  Prices and stock are for the basket's delivery slot (or the site's default when anonymous).
+  Prices, stock and offers depend on the delivery slot. They are for the basket's slot (or the
+  site's default when anonymous); search and offers take --slot SLOT_ID to see another one.
   Output is JSON on stdout; --text gives a compact human view. Fields that are null or empty
   are left out.
   Credentials: NEMLIG_USER and NEMLIG_PASS in the environment, in --env-file, in ./.env, or in
@@ -65,6 +66,9 @@ exit codes:
   0 ok, 1 nemlig.com or network error, 2 bad usage, 3 not logged in or login rejected.
   Errors are printed to stderr as {"error": ..., "message": ...}.
 """
+
+
+SLOT_HELP = "price for this delivery slot (from `delivery`) without reserving it"
 
 
 class UsageError(Exception):
@@ -134,7 +138,7 @@ def _confirm(args: argparse.Namespace, what: str) -> None:
 
 
 def cmd_search(nc: NemligClient, a: argparse.Namespace) -> Any:
-    results = nc.search_many(a.queries, limit=a.limit, offset=a.offset)
+    results = nc.search_many(a.queries, limit=a.limit, offset=a.offset, slot_id=a.slot)
     return results[0] if len(results) == 1 else results
 
 
@@ -167,7 +171,7 @@ def cmd_basket_remove_sold_out(nc: NemligClient, a: argparse.Namespace) -> Any:
 
 
 def cmd_basket_clear(nc: NemligClient, a: argparse.Namespace) -> Any:
-    _confirm(a, "clearing the basket (it also drops the reserved delivery slot)")
+    _confirm(a, "clearing the basket")
     return nc.clear_basket()
 
 
@@ -200,7 +204,7 @@ def cmd_favourites(nc: NemligClient, a: argparse.Namespace) -> Any:
 
 
 def cmd_offers(nc: NemligClient, a: argparse.Namespace) -> Any:
-    return nc.get_offers(limit=a.limit or None)
+    return nc.get_offers(limit=a.limit or None, slot_id=a.slot)
 
 
 def cmd_lists(nc: NemligClient, a: argparse.Namespace) -> Any:
@@ -292,6 +296,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("queries", nargs="+", metavar="QUERY", help="one or more queries (quote multi-word ones)")
     sp.add_argument("--limit", type=int, default=10, help="products per query (default 10)")
     sp.add_argument("--offset", type=int, default=0, help="products to skip, for paging")
+    sp.add_argument("--slot", type=int, metavar="SLOT_ID", help=SLOT_HELP)
 
     sp = cmd(sub, "suggest", cmd_suggest, "autocomplete: search terms and categories")
     sp.add_argument("query")
@@ -331,8 +336,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     cmd(sub, "favourites", cmd_favourites, "the account's favourite products")
 
-    sp = cmd(sub, "offers", cmd_offers, "current offers")
+    sp = cmd(sub, "offers", cmd_offers, "offers for the delivery slot")
     sp.add_argument("--limit", type=int, default=20, help="max products (default 20, 0 for all)")
+    sp.add_argument("--slot", type=int, metavar="SLOT_ID", help=SLOT_HELP)
 
     lists = cmd(sub, "lists", cmd_lists, "shopping lists (default: list them)")
     lsub = lists.add_subparsers(metavar="ACTION")

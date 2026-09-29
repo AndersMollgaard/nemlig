@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 from conftest import fixture
@@ -8,6 +8,7 @@ from nemlig.models import (
     Account,
     Basket,
     DeliveryDay,
+    DeliverySlot,
     Order,
     OrderSummary,
     Product,
@@ -100,6 +101,24 @@ def test_delivery_days():
     assert days[1].slots[0].is_available
     assert (slot.start_hour, slot.end_hour, slot.price) == (1, 6, 29.0)
     assert days[0].note and "<" not in days[0].note
+
+
+@pytest.mark.parametrize(
+    ("day", "hours", "deadline", "expected"),
+    [
+        # Values seen from the basket and the bootstrap settings (summer time, UTC+2).
+        (date(2026, 9, 29), (11, 13), datetime(2026, 9, 28, 14), "2026092909-120-1260"),
+        (date(2026, 10, 6), (7, 8), datetime(2026, 10, 5, 14), "2026100605-60-1020"),
+        (date(2026, 9, 27), (16, 17), datetime(2026, 9, 27, 12), "2026092714-60-240"),
+        # Winter time is UTC+1.
+        (date(2026, 11, 5), (7, 8), datetime(2026, 11, 4, 14), "2026110506-60-1020"),
+    ],
+)
+def test_slot_timeslot_utc(day, hours, deadline, expected):
+    slot = DeliverySlot(
+        id=1, date=day, start_hour=hours[0], end_hour=hours[1], price=49.0, deadline=deadline, availability=0
+    )
+    assert slot.timeslot_utc == expected
 
 
 def test_orders():

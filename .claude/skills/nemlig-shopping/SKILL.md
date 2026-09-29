@@ -20,6 +20,9 @@ Round trips matter most. Every step below is meant to save one.
   laktosefri, frost...), `brand`, `category`, or per-line `discount`.
 - **Start with `nemlig --text basket`.** It shows what is already there and the reserved
   delivery slot, and it logs in if the session has expired.
+- **Offers and deals depend on the delivery slot.** Search and offers use the basket's slot
+  (the earliest one if none is reserved). If the user plans another day, add `--slot SLOT_ID`
+  (from `delivery`) to `search` and `offers` rather than reserving it.
 - **Search for every item in one call.** The queries run in parallel, so a whole shopping list
   takes about as long as one search (~1 s):
   ```sh
@@ -91,7 +94,7 @@ In order of priority:
 - To correct a quantity, use `set`. It is absolute, so it is safe to repeat.
 - Product ids are strings of digits, taken from search, basket or order output. Never guess one.
 - Don't run `basket clear --yes`, `lists delete --yes` or `delivery reserve` unless the user
-  asked for it in this conversation. Clearing the basket also drops the reserved delivery slot.
+  asked for it in this conversation. Clearing the basket keeps the reserved delivery slot.
 
 ## Reporting
 
@@ -112,7 +115,8 @@ last `basket` command printed.
 ## Other commands
 
 ```sh
-nemlig --text offers --limit 20                     # current offers
+nemlig --text offers --limit 20                     # offers for the basket's delivery slot
+nemlig --text offers --slot SLOT_ID                 # another slot's offers, without reserving it
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)
 nemlig --text delivery --available --days 3         # bookable slots: SLOT_ID time price
