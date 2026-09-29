@@ -4,6 +4,8 @@ An unofficial client for nemlig.com. `src/nemlig/client.py` holds the API (one m
 operation, returning pydantic models), and `src/nemlig/cli.py` is the `nemlig` CLI built on it
 for agents. Nemlig has no public API, so `docs/nemlig-api.md` is the endpoint reference: read it
 before changing any request. `docs/fixtures/` holds redacted real responses for the tests.
+`docs/roadmap.md` is the plan for the basket-filling skills. Read it before working on them, and
+tick off steps as they land.
 
 ```sh
 uv run pytest                             # offline, against the fixtures

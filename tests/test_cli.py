@@ -78,6 +78,51 @@ def test_search_several_queries(api, anonymous, capsys):
     assert [h.split("results for ")[1] for h in heads] == ["'mælk'", "'æg'"]
 
 
+def _search_with(*products):
+    """The search fixture with extra products next to its two havregryn (9.95 and 10.64 kr/kg)."""
+    data = fixture("search.json")
+    base = data["Products"]["Products"][0]
+    extra = [{**base, "Campaign": None, **p} for p in products]
+    return {**data, "Products": {**data["Products"], "Products": data["Products"]["Products"] + extra}}
+
+
+def test_search_cheaper_than_a_basket_line(api, customer, capsys):
+    # The basket's havregryn [5034594] costs 7.95 kr/kg (sent as "kr./Kg.").
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
+    offer = {"CampaignPrice": 14.0, "MinQuantity": 2}
+    search = api.get(f"{GW}/searchgateway/api/search").respond(
+        json=_search_with(
+            {"Id": "1", "Price": 6.0, "UnitPriceCalc": 6.0},  # cheaper
+            {"Id": "2", "Price": 10.0, "UnitPriceCalc": 10.0, "Campaign": offer},  # 7.00 kr/kg for 2
+            {"Id": "3", "Price": 5.0, "UnitPriceCalc": 5.0, "Availability": {"IsAvailableInStock": False}},
+            {"Id": "4", "Price": 1.0, "UnitPriceCalc": 1.0, "UnitPriceLabel": "kr/stk"},
+        )
+    )
+    code, out, _ = run(capsys, "search", "havregryn", "--cheaper-than", "5034594")
+    assert code == 0 and search.call_count == 1
+    products = json.loads(out)["products"]
+    assert [p["id"] for p in products] == ["1", "2"]
+    assert products[1]["offer_unit_price"] == 7.0
+
+    code, out, _ = run(capsys, "--text", "search", "havregryn", "--cheaper-than", "5034594")
+    assert "offer: 2 for 14 kr (7.00 kr/kg)" in out
+
+
+@pytest.mark.parametrize(
+    ("argv", "message"),
+    [
+        (["a", "b", "--cheaper-than", "5034594"], "one basket product id per query"),
+        (["a", "--cheaper-than", "999"], "not in the basket: 999"),
+    ],
+)
+def test_search_cheaper_than_usage(api, customer, capsys, argv, message):
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
+    search = api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
+    code, _, err = run(capsys, "search", *argv)
+    assert code == 2 and message in err
+    assert search.call_count == 0
+
+
 def test_basket_add_several_items(api, customer, add_route, capsys):
     code, out, _ = run(capsys, "basket", "add", "111:2", "222")
     assert code == 0
@@ -89,6 +134,7 @@ def test_basket_add_several_items(api, customer, add_route, capsys):
     basket = json.loads(out)
     assert basket["total_price"] == 229.05
     assert [line["product_id"] for line in basket["lines"]] == ["5036764", "5034594"]
+    assert basket["lines"][0]["unit_price_label"] == "kr/kg"
     assert "delivery_context" not in basket
 
 

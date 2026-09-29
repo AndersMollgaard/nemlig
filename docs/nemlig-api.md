@@ -284,6 +284,10 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
 - **`Campaign` on search products** is a deal, not a discounted `Price`: `{CampaignPrice: 50,
   MinQuantity: 3, Type: "ProductCampaignMixOffer"}` means 3 for 50 kr. `Price` stays the
   regular unit price. `DiscountItem: true` marks nemlig's budget "Discount" range, not an offer.
+- **Basket lines are full products.** Each line in `GetBasket` has the search fields too
+  (`UnitPriceCalc`, `UnitPriceLabel`, `Labels`, `Campaign`, `SubCategory`), but the basket and
+  product pages spell the unit label `kr./Kg.` where search says `kr/kg`. The models normalise
+  every label to the search spelling (`kr/kg`, `kr/l`, `kr/stk`).
 - **Shopping lists:** `CreateShoppingList` returns the new list. `UpdateProductInShoppingList`
   returns `{List: {…}}`, and amount 0 removes the product. `RemoveShoppingList` returns an empty
   200. A missing list gives `400 {ErrorCode: 2}`.

@@ -19,6 +19,7 @@ from nemlig.models import (
     SlotAvailability,
     Suggestions,
 )
+from nemlig.models._base import unit_label
 
 
 def test_search_result():
@@ -45,6 +46,20 @@ def test_campaign_offer_text(campaign, text):
     p = Product.from_api({"Id": "1", "Name": "Mælk", "Price": 18.0, "Campaign": campaign})
     assert p.offer == text
     assert p.on_offer is (text is not None)
+
+
+@pytest.mark.parametrize(
+    ("price", "unit_price", "campaign", "offer_unit_price"),
+    [
+        (22.5, 30.0, {"CampaignPrice": 18.0, "MinQuantity": 1}, 24.0),  # 750 g loaf, "18 kr"
+        (34.75, 38.61, {"CampaignPrice": 100.0, "MinQuantity": 3}, 37.04),  # 0.9 l, "3 for 100 kr"
+        (22.5, 30.0, None, None),
+        (22.5, None, {"CampaignPrice": 18.0, "MinQuantity": 1}, None),
+    ],
+)
+def test_offer_unit_price(price, unit_price, campaign, offer_unit_price):
+    d = {"Id": "1", "Name": "x", "Price": price, "UnitPriceCalc": unit_price, "Campaign": campaign}
+    assert Product.from_api(d).offer_unit_price == offer_unit_price
 
 
 def test_unavailable_product():
@@ -78,6 +93,8 @@ def test_basket():
     assert b.quantity_of("5034594") == 2
     assert b.quantity_of(5036764) == 1
     assert b.quantity_of("0") == 0
+    line = next(line for line in b.lines if line.product_id == "5036764")
+    assert (line.unit_price, line.unit_price_label) == (42.59, "kr/kg")  # sent as "kr./Kg."
     assert b.total_price == 229.05
     assert not b.is_min_total_valid
     assert b.delivery_slot and b.delivery_slot.id == 2403209 and b.delivery_slot.reserved
@@ -91,6 +108,29 @@ def test_sold_out_basket_line():
     line = dict(data["Lines"][0], Quantity=0, CheckoutHistoricalRecord={"AvailabilityStatus": 1})
     b = Basket.from_api(dict(data, Lines=[line]))
     assert b.lines[0].quantity == 0 and not b.lines[0].available
+
+
+def test_basket_line_offer():
+    data = fixture("basket.json")
+    line = dict(data["Lines"][0], Campaign={"CampaignPrice": 50.0, "MinQuantity": 3}, Labels=["Øko (dansk)"])
+    b = Basket.from_api(dict(data, Lines=[line]))
+    assert b.lines[0].offer == "3 for 50 kr"
+    assert b.lines[0].labels == ["Øko (dansk)"]
+
+
+@pytest.mark.parametrize(
+    ("raw", "label"),
+    [
+        ("kr./Kg.", "kr/kg"),
+        ("kr/kg", "kr/kg"),
+        ("kr./Ltr.", "kr/l"),
+        ("kr./Stk.", "kr/stk"),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_unit_label(raw, label):
+    assert unit_label(raw) == label
 
 
 def test_delivery_days():

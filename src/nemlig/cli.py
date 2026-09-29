@@ -23,6 +23,7 @@ from .client import NemligClient
 from .errors import ApiError, AuthError, NemligError, NotLoggedInError
 from .models import (
     Basket,
+    BasketLine,
     DeliveryDay,
     Order,
     OrderSummary,
@@ -48,6 +49,9 @@ EPILOG = """\
 typical flow:
   nemlig search "havregryn" --limit 5     pick a product "id" from the results
   nemlig search mælk "hakket oksekød" æg   several queries in parallel: a list of results
+  nemlig search minimælk kaffe --cheaper-than 701013 5027015
+                                           per query, only what costs less per kg/l/stk than that
+                                           basket line (not per pack)
   nemlig basket add 5050406:2 5043017      add 2 of one product and 1 of another
   nemlig basket                            show the basket and its totals
 
@@ -137,8 +141,45 @@ def _confirm(args: argparse.Namespace, what: str) -> None:
         raise UsageError(f"{what} is not undoable; pass --yes to confirm")
 
 
+def _basket_lines(nc: NemligClient, ids: Sequence[str], queries: Sequence[str]) -> list[BasketLine]:
+    if len(ids) != len(queries):
+        raise UsageError(
+            f"--cheaper-than needs one basket product id per query ({len(queries)} queries, {len(ids)} ids)"
+        )
+    lines = {line.product_id: line for line in nc.get_basket().lines}
+    missing = [pid for pid in ids if pid not in lines]
+    if missing:
+        raise UsageError(f"not in the basket: {', '.join(missing)}")
+    return [lines[pid] for pid in ids]
+
+
+def _cheaper(result: SearchResult, line: BasketLine) -> SearchResult:
+    """Only in-stock products in the line's unit (kr/kg, kr/l, kr/stk) that cost less per kg, l or
+    piece, offers included. Shelf prices are not compared, so a bigger pack can cost more in total."""
+    if line.unit_price is None:
+        return result
+
+    def best(p: Product) -> float | None:
+        prices = [x for x in (p.unit_price, p.offer_unit_price) if x is not None]
+        return min(prices) if prices else None
+
+    keep = [
+        p
+        for p in result.products
+        if p.available
+        and p.id != line.product_id
+        and p.unit_price_label == line.unit_price_label
+        and (unit := best(p)) is not None
+        and unit < line.unit_price
+    ]
+    return result.model_copy(update={"products": keep})
+
+
 def cmd_search(nc: NemligClient, a: argparse.Namespace) -> Any:
+    lines = _basket_lines(nc, a.cheaper_than, a.queries) if a.cheaper_than else None
     results = nc.search_many(a.queries, limit=a.limit, offset=a.offset, slot_id=a.slot)
+    if lines:
+        results = [_cheaper(r, line) for r, line in zip(results, lines, strict=True)]
     return results[0] if len(results) == 1 else results
 
 
@@ -297,6 +338,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--limit", type=int, default=10, help="products per query (default 10)")
     sp.add_argument("--offset", type=int, default=0, help="products to skip, for paging")
     sp.add_argument("--slot", type=int, metavar="SLOT_ID", help=SLOT_HELP)
+    sp.add_argument(
+        "--cheaper-than",
+        nargs="+",
+        metavar="ID",
+        help="basket product ids, one per query in order: keep only in-stock products in the same "
+        "unit that cost less per kg, l or piece (kr/kg, kr/l, kr/stk; offers included), not per pack. "
+        "Put it after the queries",
+    )
 
     sp = cmd(sub, "suggest", cmd_suggest, "autocomplete: search terms and categories")
     sp.add_argument("query")
@@ -413,7 +462,10 @@ def _product_row(p: Product) -> str:
         price += f" ({p.unit_price:.2f} {p.unit_price_label})"
     parts.append(price)
     if p.offer:
-        parts.append(f"offer: {p.offer}")
+        offer = f"offer: {p.offer}"
+        if p.offer_unit_price is not None and p.unit_price_label:
+            offer += f" ({p.offer_unit_price:.2f} {p.unit_price_label})"
+        parts.append(offer)
     if not p.available:
         parts.append("SOLD OUT")
     return "  ".join(parts)

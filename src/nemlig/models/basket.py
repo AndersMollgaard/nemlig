@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._base import Model, money
+from ._base import Model, money, unit_label
 from .delivery import DeliveryContext, ReservedSlot
+from .product import campaign_text
 
 
 class ValidationFailure(Model):
@@ -40,6 +41,12 @@ class BasketLine(Model):
     total: float | None
     """Line total."""
     discount: float | None = None
+    unit_price: float | None = None
+    unit_price_label: str | None = None
+    """E.g. ``"kr/kg"``, spelled as in search results."""
+    labels: list[str] = []
+    offer: str | None = None
+    """Multi-buy deal like ``"3 for 50 kr"``, as in search results."""
     available: bool = True
     """False for lines left at quantity 0 because the product sold out."""
     slug: str | None = None
@@ -57,6 +64,10 @@ class BasketLine(Model):
             item_price=money(d.get("ItemPrice")),
             total=money(d.get("Price")),
             discount=money(d.get("DiscountSavings")) or None,
+            unit_price=money(d.get("UnitPriceCalc")),
+            unit_price_label=unit_label(d.get("UnitPriceLabel")),
+            labels=list(d.get("Labels") or []),
+            offer=campaign_text(d.get("Campaign")),
             available=quantity > 0 and not record.get("AvailabilityStatus"),
             slug=d.get("Url") or None,
         )

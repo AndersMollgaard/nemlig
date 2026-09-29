@@ -17,7 +17,8 @@ Round trips matter most. Every step below is meant to save one.
 
 - **Always pass `--text`.** It is about 5x smaller than JSON and still shows ids, prices, offers
   and SOLD OUT. Use JSON only when you need fields that text leaves out: `labels` (øko,
-  laktosefri, frost...), `brand`, `category`, or per-line `discount`.
+  laktosefri, frost...), `brand`, `category`, or per-line `discount`. JSON `basket` also has
+  each line's `unit_price`, `labels` and `offer`.
 - **Start with `nemlig --text basket`.** It shows what is already there and the reserved
   delivery slot, and it logs in if the session has expired.
 - **Offers and deals depend on the delivery slot.** Search and offers use the basket's slot
@@ -37,6 +38,29 @@ Round trips matter most. Every step below is meant to save one.
   asks about ingredients, allergens or nutrition. It is long.
 - **`favourites` is large (~16 KB of text).** Filter it:
   `nemlig --text favourites | grep -i -E "mælk|kaffe"`.
+
+## Preferences
+
+`~/.config/nemlig/preferences.md` (under `$XDG_CONFIG_HOME` if set) holds what the household
+always wants. Read it once per session, before choosing products. It may not exist yet.
+
+```markdown
+## Household
+2 adults, 1 child
+## Diet
+No pork.
+## Always
+Øko milk and eggs. Laktosefri yoghurt.
+## Never swap
+Arla Lærkevang, Lavazza coffee.
+## Budget
+About 1200 kr a week.
+```
+
+- Its rules are hard constraints, the same as what the user says in the conversation.
+- When the user corrects you in a way that will hold next time ("we always buy X", "never
+  pork"), add it under the right heading (create the file if needed) and mention it in the
+  report. Don't record one-off choices.
 
 ## Core loop: "put these things in my basket"
 
@@ -62,8 +86,8 @@ lines and `basket add` the ones you want.
 
 In order of priority:
 
-1. **What the user said.** Size, brand, fat %, øko, laktosefri and similar are hard
-   constraints.
+1. **What the user said, and the preferences file.** Size, brand, fat %, øko, laktosefri and
+   similar are hard constraints.
 2. **What the household buys.** If the user has an order history, a product they bought before
    or marked as a favourite beats a new one. Look it up when the item is ambiguous, e.g. milk
    (mini/let/søde, øko or not) or coffee. `orders show` of the latest 1–3 orders plus a grepped
@@ -73,7 +97,8 @@ In order of priority:
    unless it was asked for.
 
 - Skip anything marked `SOLD OUT`. Pick the closest alternative and mention the swap.
-- Mention an offer (`offer: 2 for 58 kr`) when it changes what the best buy is, e.g. buying 2.
+- Mention an offer (`offer: 2 for 58 kr (29.00 kr/l)`) when it changes what the best buy is,
+  e.g. buying 2. The bracket is the unit price when buying the offer's quantity.
 - "500 g hakket oksekød" means a pack of about that size, not a quantity of 500. Weigh the
   quantity against the pack description (`1 kg`, `10 stk.`).
 - Ask before adding only when a wrong guess would be costly or unwanted: a big price
@@ -112,10 +137,29 @@ Basket: 412.30 kr, 87.70 kr below the 500 kr minimum. Delivery tors. 01/10 16-21
 Take the totals, the minimum-order line and the delivery slot from the basket output that the
 last `basket` command printed.
 
+## Sub-skills
+
+`nemlig-cheaper` (and later ones) do one job each on top of this skill. Every sub-skill starts
+with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the rules here.
+
+- **Alone** (the user asked for it): it reports to the user as in *Reporting* and applies what
+  the user accepts.
+- **Chained** (`nemlig-fill-basket` invoked it and says so): no report and no questions to the
+  user. It makes only the basket changes it was told to make, and hands back one block:
+  ```
+  Applied:
+  - (basket changes made, or "none")
+  Proposed:
+  - swap [5036764] Popcorn m. salt 3x90 g → [5012345] Popcorn 4x100 g, saves 4.10 kr (42.59 → 30.10 kr/kg)
+  Questions:
+  - (anything only the user can decide, or "none")
+  ```
+
 ## Other commands
 
 ```sh
 nemlig --text offers --limit 20                     # offers for the basket's delivery slot
+nemlig --text search Q1 Q2 --cheaper-than ID1 ID2   # only what costs less per kg/l/stk than those basket lines
 nemlig --text offers --slot SLOT_ID                 # another slot's offers, without reserving it
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)

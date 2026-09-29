@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._base import Model, html_to_text, money, ore_to_kr
+from ._base import Model, html_to_text, money, ore_to_kr, unit_label
 
 
 def _available(availability: dict[str, Any] | None) -> bool:
@@ -30,6 +30,8 @@ class Product(Model):
     on_offer: bool = False
     offer: str | None = None
     """Offer text: a multi-buy deal like ``"3 for 50 kr"``, or a badge like ``"Spar 3,-"``."""
+    offer_unit_price: float | None = None
+    """``unit_price`` when buying the offer's quantity at the offer price (search and product pages)."""
     available: bool = True
     favourite: bool = False
     slug: str | None = None
@@ -69,7 +71,7 @@ class Product(Model):
         )
 
 
-def _campaign_text(campaign: dict[str, Any] | None) -> str | None:
+def campaign_text(campaign: dict[str, Any] | None) -> str | None:
     """Search and product pages describe multi-buy deals, e.g. ``3 for 50 kr``."""
     if not campaign or campaign.get("CampaignPrice") is None:
         return None
@@ -78,8 +80,18 @@ def _campaign_text(campaign: dict[str, Any] | None) -> str | None:
     return f"{count} for {price}" if count > 1 else price
 
 
+def _offer_unit_price(d: dict[str, Any]) -> float | None:
+    campaign = d.get("Campaign") or {}
+    price, unit_price = money(d.get("Price")), money(d.get("UnitPriceCalc"))
+    offer_price = money(campaign.get("CampaignPrice"))
+    if offer_price is None or not price or unit_price is None:
+        return None
+    count = int(campaign.get("MinQuantity") or 1)
+    return round(unit_price * offer_price / count / price, 2)
+
+
 def _pascal_fields(d: dict[str, Any]) -> dict[str, Any]:
-    offer = _campaign_text(d.get("Campaign"))
+    offer = campaign_text(d.get("Campaign"))
     return {
         "id": str(d["Id"]),
         "name": d.get("Name") or "",
@@ -87,12 +99,13 @@ def _pascal_fields(d: dict[str, Any]) -> dict[str, Any]:
         "description": d.get("Description") or None,
         "price": money(d.get("Price")),
         "unit_price": money(d.get("UnitPriceCalc")),
-        "unit_price_label": d.get("UnitPriceLabel") or None,
+        "unit_price_label": unit_label(d.get("UnitPriceLabel")),
         "category": d.get("SubCategory") or d.get("Category") or None,
         "labels": list(d.get("Labels") or []),
         # DiscountItem marks the budget "Discount" range, not an offer, so it is not used here.
         "on_offer": bool(offer),
         "offer": offer,
+        "offer_unit_price": _offer_unit_price(d),
         "available": _available(d.get("Availability")),
         "favourite": bool(d.get("Favorite")),
         "slug": d.get("Url") or None,

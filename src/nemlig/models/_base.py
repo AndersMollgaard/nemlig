@@ -35,6 +35,18 @@ def ore_to_kr(value: Any) -> float | None:
     return round(int(value) / 100, 2)
 
 
+_UNITS = {"ltr": "l", "liter": "l"}
+
+
+def unit_label(value: Any) -> str | None:
+    """Unit-price label in one spelling: search says ``kr/kg``, the basket ``kr./Kg.``."""
+    if not value:
+        return None
+    label = str(value).lower().replace(".", "").replace(" ", "")
+    currency, sep, unit = label.partition("/")
+    return f"{currency}/{_UNITS.get(unit, unit)}" if sep else label
+
+
 def parse_datetime(value: Any) -> datetime | None:
     if not value or str(value).startswith("0001-01-01"):
         return None

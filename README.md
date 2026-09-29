@@ -103,7 +103,7 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 
 | Command | What |
 | --- | --- |
-| `search QUERY... [--limit] [--offset] [--slot]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list |
+| `search QUERY... [--limit] [--offset] [--slot] [--cheaper-than ID...]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list. `--cheaper-than` takes one basket product id per query and keeps only what costs less per kg, l or piece (not per pack), offers included |
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
 | `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots |
 | `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID` | Order history |
@@ -112,7 +112,9 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 | `status`, `login`, `logout` | Session |
 
 - **Output.** JSON with null and empty fields, image URLs and slugs left out. Basket changes
-  print the resulting basket.
+  print the resulting basket. Basket lines in JSON carry the unit price (`kr/kg`, `kr/l`),
+  labels and offer, as search results do; `--text` leaves them out. A search product on offer
+  also has `offer_unit_price`, the unit price when buying the offer's quantity.
 - **Several items per call.** `basket add/set/remove` and `lists set` apply their items in order.
   If one fails, the error lists the items that were already `applied`, so an agent can recover
   without adding twice.
@@ -128,12 +130,16 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 [`.claude/skills/nemlig-shopping`](.claude/skills/nemlig-shopping/SKILL.md) is the shopping
 playbook: compact `--text` output, one multi-query `search` and one `basket add` per batch, how to choose
 products, and how to recover from errors. Claude Code picks it up automatically inside this repo.
+[`nemlig-cheaper`](.claude/skills/nemlig-cheaper/SKILL.md) builds on it: it compares unit
+prices for what is in the basket and proposes cheaper swaps. Both read household preferences
+from `~/.config/nemlig/preferences.md`.
 
-To shop from any directory, install the command and the skill for your user:
+To shop from any directory, install the command and the skills for your user:
 
 ```sh
 uv tool install --editable .                       # puts `nemlig` on PATH
 ln -s "$PWD/.claude/skills/nemlig-shopping" ~/.claude/skills/nemlig-shopping
+ln -s "$PWD/.claude/skills/nemlig-cheaper" ~/.claude/skills/nemlig-cheaper
 cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
 ```
 
