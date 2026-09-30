@@ -235,6 +235,41 @@ def test_shopping_lists_stop_when_a_page_repeats(api, customer):
     assert route.call_count == 2
 
 
+def test_reserve_slot_confirms_a_price_change(api, customer, basket_route):
+    # Based on a real response (2026-09-30), with one line made undeliverable. The new slot is
+    # cheaper, so the "try" only reports the diffs and does not reserve.
+    tried = {
+        "PriceChangeDiff": 91.21,
+        "IsReserved": False,
+        "IsPriceDiffChangePositive": False,
+        "ProductLineDiffs": [
+            {"ProductName": "Mørbrad af gris", "Undeliverable": False, "AmountDiff": -57.01},
+            {"ProductName": "Laksefilet m. skind", "Undeliverable": False, "AmountDiff": -30.8},
+            {"ProductName": "Solsikkerugbrød", "Undeliverable": False, "AmountDiff": 4.5},
+            {"ProductName": "Yoghurt m. pære og banan 1,4%", "Undeliverable": False, "AmountDiff": -3.95},
+            {"ProductName": "Peberfrugt rød", "Undeliverable": True, "AmountDiff": -3.95},
+        ],
+        "BundleLineDiffs": [],
+        "CouponLineDiffs": [],
+    }
+    api.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime").respond(json=tried)
+    confirm = api.post(f"{WWW}/webapi/Delivery/UpdateDeliveryTime").respond(
+        json={"PriceChangeDiff": 0.0, "IsReserved": True, "ProductLineDiffs": []}
+    )
+    result = customer.reserve_slot(2403209)
+    assert params(confirm) == {"timeslotId": "2403209"}
+    assert result.reserved
+    assert result.price_change == -91.21
+    assert result.undeliverable == ["Peberfrugt rød"]
+
+
+def test_reserve_slot_without_diffs_does_not_confirm(api, customer, basket_route):
+    api.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime").respond(json={"IsReserved": False})
+    confirm = api.post(f"{WWW}/webapi/Delivery/UpdateDeliveryTime").respond(json={"IsReserved": True})
+    assert not customer.reserve_slot(2403209).reserved
+    assert not confirm.called
+
+
 def test_reserve_slot_tolerates_a_bare_boolean(api, customer, basket_route):
     api.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime").respond(json=True)
     assert customer.reserve_slot(2403209).reserved

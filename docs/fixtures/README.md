@@ -27,6 +27,7 @@ Each file is `{"_note": "<request and remarks>", "response": <trimmed body>}`.
 | `search_quick.json` | `GET gw/searchgateway/api/quick` |
 | `product_details.json` | `GET www/<slug>?GetAsJson=1`, `productdetailspot` content |
 | `productbff_favourites.json` | `GET gw/productbff/api/web/page?path=/favoritter` |
+| `productbff_offers.json` | `GET gw/productbff/api/web/page?path=/tilbud`: hand-picked products, not trimmed (2026-09-30) |
 | `delivery_days_anonymous.json` | `GET www/webapi/v2/Delivery/GetDeliveryDays` |
 | `order_history.json` | `GET www/webapi/order/GetBasicOrderHistory` |
 | `order_lines.json` | `GET www/webapi/v2/order/GetOrderHistory/{Id}` |

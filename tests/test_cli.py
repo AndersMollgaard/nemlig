@@ -235,6 +235,24 @@ def test_delivery_available_filter(api, customer, capsys):
     assert all(s["availability"] == 0 for s in open_slots)
 
 
+def test_delivery_reserve_text_shows_the_price_change(api, customer, capsys):
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
+    api.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime").respond(
+        json={
+            "IsReserved": False,
+            "ProductLineDiffs": [
+                {"ProductName": "Laks", "Undeliverable": False, "AmountDiff": -30.8},
+                {"ProductName": "Peber", "Undeliverable": True, "AmountDiff": 0},
+            ],
+        }
+    )
+    api.post(f"{WWW}/webapi/Delivery/UpdateDeliveryTime").respond(json={"IsReserved": True})
+    code, out, _ = run(capsys, "--text", "delivery", "reserve", "2403209")
+    assert code == 0
+    assert out.startswith("reserved: ")
+    assert "(basket -30.80 kr; undeliverable: Peber)" in out
+
+
 def test_search_and_offers_take_a_slot(api, anonymous, capsys):
     api.get(f"{WWW}/webapi/v2/Delivery/GetDeliveryDays").respond(json=fixture("delivery_days_anonymous.json"))
     search = api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
@@ -245,6 +263,46 @@ def test_search_and_offers_take_a_slot(api, anonymous, capsys):
     assert offers.calls.last.request.url.params["timeslotId"] == "2400911"
     code, _, err = run(capsys, "offers", "--slot", "1")
     assert code == 2 and "no delivery slot 1" in err
+
+
+@pytest.fixture
+def offers_route(api, anonymous):
+    return api.get(f"{GW}/productbff/api/web/page").respond(json=fixture("productbff_offers.json"))
+
+
+def ids(out):
+    return [p["id"] for p in json.loads(out)]
+
+
+def test_offers_filters(offers_route, capsys):
+    # "kød" folds to Koed and matches Frost/Koed too; the duplicate is listed once.
+    _, out, _ = run(capsys, "offers", "--category", "kød")
+    assert ids(out) == ["5027568", "5071248", "5056387", "5604676"]
+    _, out, _ = run(capsys, "offers", "--category", "Kylling", "frugt og grønt")
+    assert ids(out) == ["5056387", "5000033"]
+    _, out, _ = run(capsys, "offers", "--min-discount", "15")
+    assert ids(out) == ["5056387", "5604676", "5000033"]
+    _, out, _ = run(capsys, "offers", "--category", "koed", "--min-discount", "10", "--limit", "2")
+    assert ids(out) == ["5027568", "5056387"]
+
+
+def test_offers_text_shows_discount(offers_route, capsys):
+    _, out, _ = run(capsys, "offers", "--category", "koed", "--text")
+    rows = out.splitlines()
+    assert rows[0].startswith("5027568") and "99.00 kr (99.00 kr/kg) -14%" in rows[0]
+    assert "Spar" not in rows[0]  # the badge only restates the discount
+    assert "offer: God pris" in rows[1]
+    assert "-15%  offer: 3 for 112,50 kr (133.92 kr/kg)" in rows[2]
+
+
+def test_offers_categories(offers_route, capsys):
+    _, out, _ = run(capsys, "offers", "--categories", "--text")
+    assert out.splitlines()[0] == "Koed 3: Oksekoed 2, Kylling 1"
+    _, out, _ = run(capsys, "offers", "--categories", "--min-discount", "20")
+    assert json.loads(out) == [
+        {"name": "Frost", "count": 1, "sub": {"Koed": 1}},
+        {"name": "Frugt-og-groent", "count": 1, "sub": {"Frugt": 1}},
+    ]
 
 
 def test_status_anonymous(api, anonymous, capsys):

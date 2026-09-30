@@ -92,16 +92,45 @@ order. Single-price offers are now handled by `offer_unit_price` (see box 4).
 
 ## Phase 2: `nemlig-dinners`
 
-- [ ] **Filter offers in the CLI.** The full `/tilbud` list is over 1,000 products. Add
+- [x] **Filter offers in the CLI.** The full `/tilbud` list is over 1,000 products. Add
   `offers --category`, and a way to list the categories with counts, using `Product.category`
   from productbff (`src/nemlig/models/product.py`). Check whether productbff exposes a
   before-price. If it does, add `--min-discount`.
-- [ ] **Spike: nemlig recipes.** Search accepts `recipeCount`. Probe whether recipes come back
+  - Decided (2026-09-30): productbff's `category` is now the path `Koed/Oksekoed`, with no new
+    field. `--category` matches either level, ignoring case and folding `æøå` and spaces, so
+    `kød` finds `Koed/*` and `Frost/Koed`. `--categories` prints the counts per top and sub
+    category.
+  - Decided: productbff has a before-price (`priceOriginal`, on 864 of 1350 offers). Multi-buy
+    deals are only in `campaignLines` text (`Mix 3 stk. 38,-`) and are now parsed into `offer`
+    (`3 for 38 kr`) and `offer_unit_price`. The new `discount` (percent) is the larger of the
+    two savings. `--min-discount` filters on it, and `--text` shows `-30%` in place of the
+    `Spar …` badge.
+  - Sizes: meat, fish, vegetables and meat substitutes come to 131 offers (12.5 KB of text).
+    At 20% off or more, 82 (7.5 KB), and at 25%, 46 (4.1 KB). The skill uses 20%.
+- [x] **Spike: nemlig recipes.** Search accepts `recipeCount`. Probe whether recipes come back
   with linked products. Decide between nemlig's recipes and dishes Claude makes up. Write the
   result in `docs/nemlig-api.md`.
+  - Decided (2026-09-30, by the user): Claude makes up the dishes. The recipes were not probed.
 - [ ] Skill flow: read preferences (household size, diet), fetch dinner-relevant offers (meat,
   fish, vegetables) and pick N dinners. Build the ingredient list and skip what is in the basket
   or was bought recently (pantry staples). Then one `search` and one `basket add`.
+
+  - Written as `nemlig-dinners`. There are two checkpoints with the user, both as tables.
+    First the anchor offers (6–10, spread across proteins) with amount, price, price per
+    amount and a note. Then one table per chosen anchor with 3 dish options, their extras and
+    the price per portion. An anchor that covers several nights for the household lets the
+    user pick that many dishes from its table. A ★ marks a suggested set of N that varies
+    cuisine, starch and method. One `search` over every dish's to-buy
+    items gives the prices, and the same picks go into the one `basket add`. Pantry staples,
+    basket lines and things that keep from the latest order count as at home. "Just pick"
+    skips both checkpoints.
+  - Decided: offers depend on the delivery slot, so the skill settles the slot before
+    fetching any offers. It uses the reserved slot or the one the user named. Otherwise it asks,
+    even on "just pick", because an unreserved basket slot is only the earliest free one. It
+    passes `--slot` to `offers` and `search`. It reserves the slot before the `basket add`, so
+    the basket is priced for the slot the offers came from. `delivery reserve` exits 0 even
+    when the reservation fails, so the skill reads the output and adds nothing on
+    `not reserved`. Chained without a slot, it hands back the question rather than guessing.
 
 Done when it proposes N plausible dinners for a given slot, most of them built around offers.
 

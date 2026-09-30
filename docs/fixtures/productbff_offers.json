@@ -1,0 +1,540 @@
+{
+ "_note": "GET gw/productbff/api/web/page?path=/tilbud&timeslotId=<slot Id>, anonymous. Hand-picked products from the real response (2026-09-30), not trimmed: a before-price (priceOriginal), a 'God pris' with none, multi-buy campaignLines ('Mix 3 stk. 112,50 kr.', '8 stk. 25,-'), Frost/Koed, a drink; 5027568 appears in both sections.",
+ "response": {
+  "id": "566a9d12-f1a0-404d-a55f-a87afb16d26f",
+  "pageType": "themePage",
+  "title": "Tilbud",
+  "pageContent": [
+   {
+    "contentType": "ProductList",
+    "anchorId": "1-88b4e263-59f7-44ee-96b9-290fe463646b",
+    "layout": "Showall",
+    "header": {
+     "title": "Skarp pris",
+     "subtitle": null,
+     "image": {
+      "source": "https://media.umbraco.io/nemlig3/042px1js/skarppris.png?mode=crop&anchor=center&width=64&height=64",
+      "accessibilityText": "Skarp Pris"
+     },
+     "button": null
+    },
+    "products": [
+     {
+      "id": "5027568",
+      "url": "5027568",
+      "title": "Hakket oksekød 4-7%",
+      "description": "1 kg / Danish Crown",
+      "price": 9900,
+      "priceOriginal": 11469,
+      "priceDiscount": 1569,
+      "pricePerUnit": {
+       "value": 9900,
+       "unitType": "Weight"
+      },
+      "currency": "DKK",
+      "labelMaxQuantity": null,
+      "labelFreshnessDays": 3,
+      "labelHighlighted": null,
+      "certificates": [
+       {
+        "type": "refrigerated",
+        "text": "Køl"
+       }
+      ],
+      "campaignLines": [
+       {
+        "text": "Skarp pris",
+        "accessibilityText": "Skarp pris",
+        "url": null,
+        "campaignType": null
+       }
+      ],
+      "campaignBadge": {
+       "primaryText": "15,69",
+       "secondaryText": "Spar",
+       "accessibilityText": "Spar 15,69 kroner"
+      },
+      "quantity": 0,
+      "unitOfMeasure": "Kg.",
+      "quantityLimit": null,
+      "isFavorite": false,
+      "isInShoppingList": false,
+      "availability": {
+       "type": "Available",
+       "nextAvailableDate": "0001-01-01T00:00:00Z",
+       "reasonMessage": []
+      },
+      "tracking": {
+       "impression": "",
+       "item_category": "Koed",
+       "item_category2": "Oksekoed",
+       "item_category3": "Hakket-oksekoed",
+       "item_name": "Hakket oksekød 4-7%",
+       "item_id": "5027568",
+       "price": "114.69",
+       "discount": "15.69",
+       "item_brand": "",
+       "item_variant": "produkt",
+       "raptor_category_path": ""
+      },
+      "dataLayerTracking": {
+       "item_list_id": "list",
+       "item_list_name": "Skarp pris"
+      },
+      "image": {
+       "source": "https://product-images.nemlig.io/5027568.webp",
+       "accessibilityText": "Billede af Hakket oksekød 4-7%"
+      }
+     },
+     {
+      "id": "5071248",
+      "url": "5071248",
+      "title": "Angus tykstegsbøffer øko.",
+      "description": "2 stk. / 280-320 g /",
+      "price": 12695,
+      "priceOriginal": null,
+      "priceDiscount": null,
+      "pricePerUnit": {
+       "value": 45339,
+       "unitType": "Weight"
+      },
+      "currency": "DKK",
+      "labelMaxQuantity": null,
+      "labelFreshnessDays": 4,
+      "labelHighlighted": {
+       "type": "Premium",
+       "url": "/dagligvarer/nye-varer-inspiration/premium"
+      },
+      "certificates": [
+       {
+        "type": "dkOrganic",
+        "text": "Øko (dansk)"
+       },
+       {
+        "type": "dkProduced",
+        "text": "Produceret i Danmark"
+       },
+       {
+        "type": "animalWelfareHearts3",
+        "text": "Bedre dyrevelfærd (3 hjerter)"
+       },
+       {
+        "type": "refrigerated",
+        "text": "Køl"
+       }
+      ],
+      "campaignLines": [
+       {
+        "text": "Dagstilbud",
+        "accessibilityText": "Dagstilbud",
+        "url": null,
+        "campaignType": null
+       }
+      ],
+      "campaignBadge": {
+       "primaryText": "God pris",
+       "secondaryText": null,
+       "accessibilityText": "God pris"
+      },
+      "quantity": 0,
+      "unitOfMeasure": "Kg.",
+      "quantityLimit": null,
+      "isFavorite": false,
+      "isInShoppingList": false,
+      "availability": {
+       "type": "Available",
+       "nextAvailableDate": "0001-01-01T00:00:00Z",
+       "reasonMessage": []
+      },
+      "tracking": {
+       "impression": "",
+       "item_category": "Koed",
+       "item_category2": "Oksekoed",
+       "item_category3": "Steaks-og-boeffer",
+       "item_name": "Angus tykstegsbøffer øko.",
+       "item_id": "5071248",
+       "price": "117.712",
+       "discount": "0",
+       "item_brand": "",
+       "item_variant": "produkt",
+       "raptor_category_path": ""
+      },
+      "dataLayerTracking": {
+       "item_list_id": "list",
+       "item_list_name": "Dagstilbud"
+      },
+      "image": {
+       "source": "https://product-images.nemlig.io/5071248.webp",
+       "accessibilityText": "Billede af Angus tykstegsbøffer øko."
+      }
+     }
+    ]
+   },
+   {
+    "contentType": "ProductList",
+    "anchorId": "1-88b4e263-59f7-44ee-96b9-290fe463646b",
+    "layout": "Showall",
+    "header": {
+     "title": "Kød",
+     "subtitle": null,
+     "image": {
+      "source": "https://media.umbraco.io/nemlig3/042px1js/skarppris.png?mode=crop&anchor=center&width=64&height=64",
+      "accessibilityText": "Skarp Pris"
+     },
+     "button": null
+    },
+    "products": [
+     {
+      "id": "5027568",
+      "url": "5027568",
+      "title": "Hakket oksekød 4-7%",
+      "description": "1 kg / Danish Crown",
+      "price": 9900,
+      "priceOriginal": 11469,
+      "priceDiscount": 1569,
+      "pricePerUnit": {
+       "value": 9900,
+       "unitType": "Weight"
+      },
+      "currency": "DKK",
+      "labelMaxQuantity": null,
+      "labelFreshnessDays": 3,
+      "labelHighlighted": null,
+      "certificates": [
+       {
+        "type": "refrigerated",
+        "text": "Køl"
+       }
+      ],
+      "campaignLines": [
+       {
+        "text": "Skarp pris",
+        "accessibilityText": "Skarp pris",
+        "url": null,
+        "campaignType": null
+       }
+      ],
+      "campaignBadge": {
+       "primaryText": "15,69",
+       "secondaryText": "Spar",
+       "accessibilityText": "Spar 15,69 kroner"
+      },
+      "quantity": 0,
+      "unitOfMeasure": "Kg.",
+      "quantityLimit": null,
+      "isFavorite": false,
+      "isInShoppingList": false,
+      "availability": {
+       "type": "Available",
+       "nextAvailableDate": "0001-01-01T00:00:00Z",
+       "reasonMessage": []
+      },
+      "tracking": {
+       "impression": "",
+       "item_category": "Koed",
+       "item_category2": "Oksekoed",
+       "item_category3": "Hakket-oksekoed",
+       "item_name": "Hakket oksekød 4-7%",
+       "item_id": "5027568",
+       "price": "114.69",
+       "discount": "15.69",
+       "item_brand": "",
+       "item_variant": "produkt",
+       "raptor_category_path": ""
+      },
+      "dataLayerTracking": {
+       "item_list_id": "list",
+       "item_list_name": "Skarp pris"
+      },
+      "image": {
+       "source": "https://product-images.nemlig.io/5027568.webp",
+       "accessibilityText": "Billede af Hakket oksekød 4-7%"
+      }
+     },
+     {
+      "id": "5056387",
+      "url": "5056387",
+      "title": "Kyllingebrystfilet",
+      "description": "280 g / Gårdkylling / Danske Familiegårde",
+      "price": 4395,
+      "priceOriginal": null,
+      "priceDiscount": null,
+      "pricePerUnit": {
+       "value": 15696,
+       "unitType": "Weight"
+      },
+      "currency": "DKK",
+      "labelMaxQuantity": null,
+      "labelFreshnessDays": 3,
+      "labelHighlighted": null,
+      "certificates": [
+       {
+        "type": "dkProduced",
+        "text": "Produceret i Danmark"
+       },
+       {
+        "type": "nordicKeyholeLabel",
+        "text": "Nøglehulsmærket"
+       },
+       {
+        "type": "animalWelfareHearts2",
+        "text": "Bedre dyrevelfærd (2 hjerter)"
+       },
+       {
+        "type": "refrigerated",
+        "text": "Køl"
+       },
+       {
+        "type": "halal",
+        "text": "Halal"
+       }
+      ],
+      "campaignLines": [
+       {
+        "text": "Mix 3 stk. 112,50 kr.",
+        "accessibilityText": "Mix 3 styk 112,50 kroner",
+        "url": null,
+        "campaignType": "Mix"
+       }
+      ],
+      "campaignBadge": {
+       "primaryText": "19,35",
+       "secondaryText": "Spar op til",
+       "accessibilityText": "Spar op til 19,35 kroner"
+      },
+      "quantity": 0,
+      "unitOfMeasure": "Kg.",
+      "quantityLimit": null,
+      "isFavorite": false,
+      "isInShoppingList": false,
+      "availability": {
+       "type": "Available",
+       "nextAvailableDate": "0001-01-01T00:00:00Z",
+       "reasonMessage": []
+      },
+      "tracking": {
+       "impression": "",
+       "item_category": "Koed",
+       "item_category2": "Kylling",
+       "item_category3": "Kyllingefilet",
+       "item_name": "Kyllingebrystfilet",
+       "item_id": "5056387",
+       "price": "43.95",
+       "discount": "19.35",
+       "item_brand": "",
+       "item_variant": "produkt",
+       "raptor_category_path": ""
+      },
+      "dataLayerTracking": {
+       "item_list_id": "list",
+       "item_list_name": "Kød"
+      },
+      "image": {
+       "source": "https://product-images.nemlig.io/5056387.webp",
+       "accessibilityText": "Billede af Kyllingebrystfilet"
+      }
+     },
+     {
+      "id": "5604676",
+      "url": "5604676",
+      "title": "Angus okseburger",
+      "description": "6 stk. / 900 g / frost",
+      "price": 9537,
+      "priceOriginal": 15895,
+      "priceDiscount": 6358,
+      "pricePerUnit": {
+       "value": 10597,
+       "unitType": "Weight"
+      },
+      "currency": "DKK",
+      "labelMaxQuantity": null,
+      "labelFreshnessDays": 30,
+      "labelHighlighted": null,
+      "certificates": [
+       {
+        "type": "frozen",
+        "text": "Frost"
+       }
+      ],
+      "campaignLines": [
+       {
+        "text": "Priskup",
+        "accessibilityText": "Priskup",
+        "url": null,
+        "campaignType": null
+       }
+      ],
+      "campaignBadge": {
+       "primaryText": "40%",
+       "secondaryText": "Spar",
+       "accessibilityText": "Spar 40 procent"
+      },
+      "quantity": 0,
+      "unitOfMeasure": "Kg.",
+      "quantityLimit": null,
+      "isFavorite": false,
+      "isInShoppingList": false,
+      "availability": {
+       "type": "Available",
+       "nextAvailableDate": "0001-01-01T00:00:00Z",
+       "reasonMessage": []
+      },
+      "tracking": {
+       "impression": "",
+       "item_category": "Frost",
+       "item_category2": "Koed",
+       "item_category3": "Oksekoed",
+       "item_name": "Angus okseburger",
+       "item_id": "5604676",
+       "price": "158.95",
+       "discount": "63.58",
+       "item_brand": "",
+       "item_variant": "produkt",
+       "raptor_category_path": ""
+      },
+      "dataLayerTracking": {
+       "item_list_id": "list",
+       "item_list_name": "Ugens priskup"
+      },
+      "image": {
+       "source": "https://product-images.nemlig.io/5604676.webp",
+       "accessibilityText": "Billede af Angus okseburger"
+      }
+     },
+     {
+      "id": "5000033",
+      "url": "5000033",
+      "title": "Clementin",
+      "description": "1 stk.",
+      "price": 400,
+      "priceOriginal": null,
+      "priceDiscount": null,
+      "pricePerUnit": {
+       "value": 400,
+       "unitType": "Pieces"
+      },
+      "currency": "DKK",
+      "labelMaxQuantity": null,
+      "labelFreshnessDays": null,
+      "labelHighlighted": {
+       "type": "Premium",
+       "url": "/dagligvarer/nye-varer-inspiration/premium"
+      },
+      "certificates": [],
+      "campaignLines": [
+       {
+        "text": "8 stk. 25,-",
+        "accessibilityText": "8 styk 25 kroner",
+        "url": null,
+        "campaignType": null
+       }
+      ],
+      "campaignBadge": {
+       "primaryText": "7,-",
+       "secondaryText": "Spar",
+       "accessibilityText": "Spar 7 kroner"
+      },
+      "quantity": 0,
+      "unitOfMeasure": "Stk.",
+      "quantityLimit": null,
+      "isFavorite": false,
+      "isInShoppingList": false,
+      "availability": {
+       "type": "Available",
+       "nextAvailableDate": "0001-01-01T00:00:00Z",
+       "reasonMessage": []
+      },
+      "tracking": {
+       "impression": "",
+       "item_category": "Frugt-og-groent",
+       "item_category2": "Frugt",
+       "item_category3": "Citrusfrugter",
+       "item_name": "Clementin",
+       "item_id": "5000033",
+       "price": "4.0",
+       "discount": "7.0",
+       "item_brand": "",
+       "item_variant": "produkt",
+       "raptor_category_path": ""
+      },
+      "dataLayerTracking": {
+       "item_list_id": "list",
+       "item_list_name": "Frugt og grønt"
+      },
+      "image": {
+       "source": "https://product-images.nemlig.io/5000033.webp",
+       "accessibilityText": "Billede af Clementin"
+      }
+     },
+     {
+      "id": "5039081",
+      "url": "5039081",
+      "title": "Pepsi Max",
+      "description": "20 x 0,33 l / ex. pant / indh. sødestoffer / Pepsi",
+      "price": 6995,
+      "priceOriginal": 7700,
+      "priceDiscount": 705,
+      "pricePerUnit": {
+       "value": 350,
+       "unitType": "Pieces"
+      },
+      "currency": "DKK",
+      "labelMaxQuantity": null,
+      "labelFreshnessDays": 30,
+      "labelHighlighted": null,
+      "certificates": [
+       {
+        "type": "sugarFree",
+        "text": "Sukkerfri"
+       }
+      ],
+      "campaignLines": [
+       {
+        "text": "Skarp pris",
+        "accessibilityText": "Skarp pris",
+        "url": null,
+        "campaignType": null
+       }
+      ],
+      "campaignBadge": {
+       "primaryText": "7,05",
+       "secondaryText": "Spar",
+       "accessibilityText": "Spar 7,05 kroner"
+      },
+      "quantity": 0,
+      "unitOfMeasure": "Stk.",
+      "quantityLimit": null,
+      "isFavorite": false,
+      "isInShoppingList": false,
+      "availability": {
+       "type": "Available",
+       "nextAvailableDate": "0001-01-01T00:00:00Z",
+       "reasonMessage": []
+      },
+      "tracking": {
+       "impression": "",
+       "item_category": "Drikkevarer",
+       "item_category2": "Sodavand",
+       "item_category3": "Sukkerfri-sodavand",
+       "item_name": "Pepsi Max",
+       "item_id": "5039081",
+       "price": "77.0",
+       "discount": "7.05",
+       "item_brand": "",
+       "item_variant": "produkt",
+       "raptor_category_path": ""
+      },
+      "dataLayerTracking": {
+       "item_list_id": "list",
+       "item_list_name": "Skarp pris"
+      },
+      "image": {
+       "source": "https://product-images.nemlig.io/5039081.webp",
+       "accessibilityText": "Billede af Pepsi Max"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

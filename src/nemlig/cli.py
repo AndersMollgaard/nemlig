@@ -54,6 +54,8 @@ typical flow:
   nemlig search minimælk kaffe --cheaper-than 701013 5027015
                                            per query, only what costs less per kg/l/stk than that
                                            basket line (not per pack)
+  nemlig offers --category kød kylling --min-discount 20
+                                           offers in those categories, at least 20% off
   nemlig basket add 5050406:2 5043017      add 2 of one product and 1 of another
   nemlig basket                            show the basket and its totals
 
@@ -265,8 +267,49 @@ def cmd_favourites(nc: NemligClient, a: argparse.Namespace) -> Any:
     return nc.get_favourites()
 
 
+class OfferCategory(BaseModel):
+    name: str
+    count: int
+    sub: dict[str, int]
+
+
+def _fold(text: str) -> str:
+    """``Kød`` and ``fisk og skaldyr`` as the category slugs spell them: ``koed``, ``fisk-og-skaldyr``."""
+    text = text.strip().lower()
+    for letter, ascii_ in (("æ", "ae"), ("ø", "oe"), ("å", "aa"), (" ", "-")):
+        text = text.replace(letter, ascii_)
+    return text
+
+
+def _in_category(p: Product, wanted: set[str]) -> bool:
+    return any(_fold(part) in wanted for part in (p.category or "").split("/"))
+
+
+def _category_counts(products: Sequence[Product]) -> list[OfferCategory]:
+    tops: dict[str, dict[str, int]] = {}
+    counts: dict[str, int] = {}
+    for p in products:
+        top, _, sub = (p.category or "-").partition("/")
+        counts[top] = counts.get(top, 0) + 1
+        subs = tops.setdefault(top, {})
+        if sub:
+            subs[sub] = subs.get(sub, 0) + 1
+    return [
+        OfferCategory(name=top, count=counts[top], sub=dict(sorted(tops[top].items(), key=lambda kv: -kv[1])))
+        for top in sorted(counts, key=lambda t: -counts[t])
+    ]
+
+
 def cmd_offers(nc: NemligClient, a: argparse.Namespace) -> Any:
-    return nc.get_offers(limit=a.limit or None, slot_id=a.slot)
+    offers = nc.get_offers(slot_id=a.slot)
+    if a.category:
+        wanted = {_fold(c) for c in a.category}
+        offers = [p for p in offers if _in_category(p, wanted)]
+    if a.min_discount is not None:
+        offers = [p for p in offers if p.discount is not None and p.discount >= a.min_discount]
+    if a.categories:
+        return _category_counts(offers)
+    return offers[: a.limit] if a.limit else offers
 
 
 def cmd_lists(nc: NemligClient, a: argparse.Namespace) -> Any:
@@ -428,8 +471,16 @@ def build_parser() -> argparse.ArgumentParser:
     cmd(sub, "favourites", cmd_favourites, "the account's favourite products")
 
     sp = cmd(sub, "offers", cmd_offers, "offers for the delivery slot")
-    sp.add_argument("--limit", type=int, default=20, help="max products (default 20, 0 for all)")
+    sp.add_argument("--limit", type=int, default=20, help="max products, filtered (default 20, 0 for all)")
     sp.add_argument("--slot", type=int, metavar="SLOT_ID", help=SLOT_HELP)
+    sp.add_argument(
+        "--category",
+        nargs="+",
+        metavar="C",
+        help="only these categories, top or sub level (koed, kylling, fisk-og-skaldyr; kød works too)",
+    )
+    sp.add_argument("--min-discount", type=int, metavar="PCT", help="only offers at least PCT percent off")
+    sp.add_argument("--categories", action="store_true", help="count the offers per category instead")
 
     lists = cmd(sub, "lists", cmd_lists, "shopping lists (default: list them)")
     lsub = lists.add_subparsers(metavar="ACTION")
@@ -522,8 +573,11 @@ def _product_row(p: Product) -> str:
     price = _kr(p.price)
     if p.unit_price is not None and p.unit_price_label:
         price += f" ({p.unit_price:.2f} {p.unit_price_label})"
+    if p.discount is not None:
+        price += f" -{p.discount}%"
     parts.append(price)
-    if p.offer:
+    # A "Spar 15,69" badge only restates the discount.
+    if p.offer and not (p.discount is not None and p.offer.startswith("Spar")):
         offer = f"offer: {p.offer}"
         if p.offer_unit_price is not None and p.unit_price_label:
             offer += f" ({p.offer_unit_price:.2f} {p.unit_price_label})"
@@ -638,11 +692,19 @@ def to_text(value: Any) -> str:
         return _text_list(value)
     if isinstance(value, SlotReservation):
         slot = value.slot.label if value.slot else "no slot"
-        return f"{'reserved' if value.reserved else 'not reserved'}: {slot}" + (
-            f" ({value.message})" if value.message else ""
-        )
+        notes = [value.message] if value.message else []
+        if value.price_change:
+            notes.append(f"basket {value.price_change:+.2f} kr")
+        if value.undeliverable:
+            notes.append("undeliverable: " + ", ".join(value.undeliverable))
+        state = "reserved" if value.reserved else "not reserved"
+        return f"{state}: {slot}" + (f" ({'; '.join(notes)})" if notes else "")
     if isinstance(value, PrefsView):
         return _text_prefs(value)
+    if isinstance(value, OfferCategory):
+        return f"{value.name} {value.count}" + (
+            ": " + ", ".join(f"{k} {v}" for k, v in value.sub.items()) if value.sub else ""
+        )
     if isinstance(value, dict):
         return "\n".join(f"{k}: {v}" for k, v in value.items())
     return json.dumps(to_json(value), ensure_ascii=False, indent=2)

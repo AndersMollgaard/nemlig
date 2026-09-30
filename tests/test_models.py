@@ -78,6 +78,22 @@ def test_productbff_product_converts_ore():
     assert p.labels == ["Øko (europæisk)"]
 
 
+def test_productbff_offers():
+    page = fixture("productbff_offers.json")
+    products = {p["id"]: Product.from_productbff(p) for s in page["pageContent"] for p in s["products"]}
+    mince = products["5027568"]  # before-price
+    assert (mince.category, mince.original_price, mince.discount) == ("Koed/Oksekoed", 114.69, 14)
+    assert mince.offer == "Spar 15,69" and mince.offer_unit_price is None
+    good_price = products["5071248"]  # no before-price and no deal
+    assert good_price.discount is None and good_price.offer == "God pris"
+    chicken = products["5056387"]  # "Mix 3 stk. 112,50 kr."
+    assert chicken.offer == "3 for 112,50 kr"
+    assert (chicken.offer_unit_price, chicken.discount) == (133.92, 15)
+    clementine = products["5000033"]  # "8 stk. 25,-"
+    assert (clementine.offer, clementine.offer_unit_price, clementine.discount) == ("8 for 25 kr", 3.12, 22)
+    assert products["5604676"].category == "Frost/Koed"
+
+
 def test_product_details():
     d = ProductDetails.from_api(fixture("product_details.json")["productdetailspot"])
     assert d.id == "5050406"

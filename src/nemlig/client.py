@@ -35,6 +35,7 @@ from .models import (
     Suggestions,
 )
 from .models.basket import validation_failures
+from .models.delivery import slot_change_diffs
 from .session import SessionStore, user_key
 
 ProductId = str | int
@@ -356,13 +357,20 @@ class NemligClient:
         return [DeliveryDay.from_api(d) for d in (data or {}).get("DayRangeHours") or []]
 
     def reserve_slot(self, slot_id: int) -> SlotReservation:
-        """Reserve a delivery slot for the basket (``DeliverySlot.id``)."""
+        """Reserve a delivery slot for the basket (``DeliverySlot.id``).
+
+        When the slot changes the basket's prices, ``TryUpdateDeliveryTime`` only reports the
+        differences and does not reserve, so the change is confirmed with ``UpdateDeliveryTime``.
+        """
         self._require_login()
-        data = self._http.post(
-            f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime", params={"timeslotId": int(slot_id)}
-        )
+        params = {"timeslotId": int(slot_id)}
+        data = self._http.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime", params=params)
         if not isinstance(data, dict):
             data = {}  # the response is undocumented; the basket read below decides
+        price_change, undeliverable = slot_change_diffs(data)
+        if data.get("IsReserved") is False and (price_change or undeliverable):
+            confirmed = self._http.post(f"{WWW}/webapi/Delivery/UpdateDeliveryTime", params=params)
+            data = confirmed if isinstance(confirmed, dict) else {}
         basket = self.get_basket()
         slot = basket.delivery_slot
         reserved = (
@@ -371,7 +379,13 @@ class NemligClient:
             else bool(slot and slot.id == int(slot_id) and slot.reserved)
         )
         message = data.get("Message") or data.get("ErrorMessage") or None
-        return SlotReservation(reserved=reserved, slot=slot, message=message)
+        return SlotReservation(
+            reserved=reserved,
+            slot=slot,
+            message=message,
+            price_change=price_change,
+            undeliverable=undeliverable,
+        )
 
     # -- orders -------------------------------------------------------------------------------
 

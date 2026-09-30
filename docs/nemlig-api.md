@@ -140,7 +140,7 @@ Example responses: see [`fixtures/`](fixtures/).
 | Product details | `GET www/<product-slug>?GetAsJson=1` | None | Slug from search `Url`; data in `content[TemplateName=productdetailspot]` | Probed |
 | Offers and favourites | `GET gw/productbff/api/web/page` | Bearer (customer JWT for favourites) | `path` (`/tilbud`, `/favoritter`), `timeslotId`. Offers follow `timeslotId`, not the reserved slot | Tested (`/tilbud` returned 2 MB) |
 | Delivery slots | `GET www/webapi/v2/Delivery/GetDeliveryDays` | None (default zone) or cookie | `startDate` (`undefined` means today), `days`, `showForSubscriptions`. Slot `Availability`: 0 = available, 1 = past deadline, 2 = sold out, 3 = not active | Probed |
-| Reserve slot | `POST www/webapi/Delivery/TryUpdateDeliveryTime?timeslotId=` | Cookie | `UpdateDeliveryTime` forces the change; the response has `IsReserved` | Repos |
+| Reserve slot | `POST www/webapi/Delivery/TryUpdateDeliveryTime?timeslotId=`, then `UpdateDeliveryTime?timeslotId=` if prices change | Cookie | The response has `IsReserved`, `PriceChangeDiff`, `ProductLineDiffs[]` and `MinutesReserved`. When the slot changes the basket's prices, `Try…` only reports the diffs; `UpdateDeliveryTime` confirms | Tested |
 | Current user | `GET www/webapi/user/GetCurrentUser` | Cookie | Returns `DebitorId`, `Email`, addresses, `UpcomingOrder`. There is no `IsLoggedIn` field | Tested |
 | Read basket | `GET www/webapi/basket/GetBasket` | Cookie only (no bearer, no `Version`) | `Lines[]`, `TotalPrice`, `IsMinTotalValid`, `DeliveryTimeSlot`, `TimeslotUtc`, `DeliveryZoneId`, `ValidationFailures`, plus personal data | Tested |
 | Set line quantity | `POST www/webapi/basket/AddToBasket` | Cookie | `{ProductId, quantity, AffectPartialQuantity, disableQuantityValidation}`. Quantity is **absolute**, 0 removes. Returns the full basket | Tested |
@@ -281,6 +281,16 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
 - **The basket always has a slot.** With no slot chosen, `DeliveryTimeSlot` is the earliest
   one, with `Reserved: false`, and `TimeslotUtc` matches it.
 - **Offers:** `/tilbud` returned 1613 products in 15 sections, 1331 unique.
+- **Offer fields** (probed 2026-09-30, 1350 unique in 24 sections): `tracking.item_category`
+  is the top category as an ASCII slug (`Koed`, `Fisk-og-skaldyr`, `Frost`), and
+  `item_category2` is the sub category (`Oksekoed`; `Frost` has `Koed` and
+  `Frugt-og-groent`). 864 products have `priceOriginal` and `priceDiscount` (øre), a
+  before-price. Most discounts are 15–42%. Multi-buy deals are only in
+  `campaignLines[].text`: `"Mix 3 stk. 38,-"`, `"2 stk. 70,-"` or `"Mix 3 stk. 112,50 kr."`.
+  These have no `priceOriginal`, and the badge says `Spar op til`. Other lines are labels
+  (`Priskup`, `Skarp pris`). Top-level `Frugt-og-groent` on offer is mostly dried fruit and
+  nuts. The model maps the category to `Koed/Oksekoed` and computes `discount` from the
+  before-price or the deal.
 - **`Campaign` on search products** is a deal, not a discounted `Price`: `{CampaignPrice: 50,
   MinQuantity: 3, Type: "ProductCampaignMixOffer"}` means 3 for 50 kr. `Price` stays the
   regular unit price. `DiscountItem: true` marks nemlig's budget "Discount" range, not an offer.
@@ -295,6 +305,13 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
   back after both. Tested 2026-09-29: `TryUpdateDeliveryTime` reserved the slot, and
   `ClearBasket` on an empty basket left the reservation in place (other clients say it drops it).
   There is no known call that releases a reservation.
+- **`TryUpdateDeliveryTime` is a preview when prices change** (tested 2026-09-30). With a basket
+  whose prices differ in the new slot, it answered `IsReserved: false`, `MinutesReserved: 0`, no
+  message, and `ProductLineDiffs[]` of `{ProductName, Undeliverable, AmountDiff}`. The site shows
+  these for the user to accept. `PriceChangeDiff` is unsigned (91.21 while the lines summed to
+  -91.21), and `IsPriceDiffChangePositive` was `false` for a cheaper basket. The same
+  `UpdateDeliveryTime?timeslotId=` POST then reserved it (`IsReserved: true`,
+  `MinutesReserved: 20`, empty diffs), and the basket moved to the new prices.
 
 ## Sources
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ._base import Model, html_to_text, money, ore_to_kr, unit_label
@@ -31,7 +32,9 @@ class Product(Model):
     offer: str | None = None
     """Offer text: a multi-buy deal like ``"3 for 50 kr"``, or a badge like ``"Spar 3,-"``."""
     offer_unit_price: float | None = None
-    """``unit_price`` when buying the offer's quantity at the offer price (search and product pages)."""
+    """``unit_price`` when buying the offer's quantity at the offer price."""
+    discount: int | None = None
+    """Percent off, from the price before the offer or a multi-buy deal (offers and favourites only)."""
     available: bool = True
     favourite: bool = False
     slug: str | None = None
@@ -47,23 +50,41 @@ class Product(Model):
     def from_productbff(cls, d: dict[str, Any]) -> Product:
         """From the camelCase productbff shape (favourites, offers), where money is in øre."""
         badge = d.get("campaignBadge") or {}
-        offer = " ".join(t for t in (badge.get("secondaryText"), badge.get("primaryText")) if t) or None
         per_unit = d.get("pricePerUnit") or {}
         unit_label = {"Weight": "kr/kg", "Volume": "kr/l", "Pieces": "kr/stk"}.get(per_unit.get("unitType"))
         tracking = d.get("tracking") or {}
+        category = "/".join(c for c in (tracking.get("item_category"), tracking.get("item_category2")) if c)
+        price, original_price = ore_to_kr(d.get("price")), ore_to_kr(d.get("priceOriginal"))
+        unit_price = ore_to_kr(per_unit.get("value"))
+        deal = _multi_buy(d.get("campaignLines"))
+        offer_unit_price = None
+        if deal:
+            offer = _deal_text(*deal)
+            if price and unit_price is not None:
+                offer_unit_price = round(unit_price * deal[1] / deal[0] / price, 2)
+        else:
+            offer = " ".join(t for t in (badge.get("secondaryText"), badge.get("primaryText")) if t) or None
+        cuts = []
+        if price and original_price:
+            cuts.append(1 - price / original_price)
+        if offer_unit_price is not None and unit_price:
+            cuts.append(1 - offer_unit_price / unit_price)
+        discount = round(100 * max(cuts)) if cuts and max(cuts) > 0 else None
         return cls(
             id=str(d["id"]),
             name=d.get("title") or "",
             brand=tracking.get("item_brand") or None,
             description=d.get("description") or None,
-            price=ore_to_kr(d.get("price")),
-            original_price=ore_to_kr(d.get("priceOriginal")),
-            unit_price=ore_to_kr(per_unit.get("value")),
+            price=price,
+            original_price=original_price,
+            unit_price=unit_price,
             unit_price_label=unit_label,
-            category=tracking.get("item_category2") or tracking.get("item_category") or None,
+            category=category or None,
             labels=[c["text"] for c in d.get("certificates") or [] if c.get("text")],
             on_offer=bool(d.get("priceDiscount")) or bool(offer),
             offer=offer,
+            offer_unit_price=offer_unit_price,
+            discount=discount,
             available=(d.get("availability") or {}).get("type", "Available") == "Available",
             favourite=bool(d.get("isFavorite")),
             slug=str(d["id"]),
@@ -71,13 +92,31 @@ class Product(Model):
         )
 
 
+def _deal_text(count: int, price: float) -> str:
+    """``3 for 50 kr``, or ``16,95 kr`` for a single-price deal."""
+    text = (f"{price:g}" if price == int(price) else f"{price:.2f}").replace(".", ",") + " kr"
+    return f"{count} for {text}" if count > 1 else text
+
+
 def campaign_text(campaign: dict[str, Any] | None) -> str | None:
     """Search and product pages describe multi-buy deals, e.g. ``3 for 50 kr``."""
-    if not campaign or campaign.get("CampaignPrice") is None:
+    price = money((campaign or {}).get("CampaignPrice"))
+    if not campaign or price is None:
         return None
-    price = f"{money(campaign['CampaignPrice']):g} kr".replace(".", ",")
-    count = int(campaign.get("MinQuantity") or 1)
-    return f"{count} for {price}" if count > 1 else price
+    return _deal_text(int(campaign.get("MinQuantity") or 1), price)
+
+
+# productbff campaign lines: "Mix 3 stk. 38,-", "2 stk. 70,-", "Mix 3 stk. 112,50 kr."
+_MULTI_BUY = re.compile(r"(?:Mix )?(\d+) stk\. (\d+)(?:,(\d+))?")
+
+
+def _multi_buy(lines: list[dict[str, Any]] | None) -> tuple[int, float] | None:
+    """The first multi-buy deal as (count, price in kroner)."""
+    for line in lines or []:
+        m = _MULTI_BUY.match(line.get("text") or "")
+        if m and int(m[1]) > 1:
+            return int(m[1]), float(f"{m[2]}.{m[3] or 0}")
+    return None
 
 
 def _offer_unit_price(d: dict[str, Any]) -> float | None:

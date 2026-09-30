@@ -128,3 +128,22 @@ class SlotReservation(Model):
     reserved: bool
     slot: ReservedSlot | None
     message: str | None = None
+    price_change: float | None = None
+    """How much the basket total moved with the new slot's prices, in kr (negative is cheaper)."""
+    undeliverable: list[str] = []
+    """Basket products the new slot can't deliver."""
+
+
+def slot_change_diffs(d: dict[str, Any]) -> tuple[float | None, list[str]]:
+    """The price change and undeliverable products in a ``TryUpdateDeliveryTime`` response.
+
+    ``PriceChangeDiff`` has no sign, so the change is the sum of the lines' ``AmountDiff``.
+    """
+    lines = [
+        line
+        for key in ("ProductLineDiffs", "BundleLineDiffs", "CouponLineDiffs")
+        for line in d.get(key) or []
+    ]
+    change = round(sum(float(line.get("AmountDiff") or 0) for line in lines), 2)
+    undeliverable = [line.get("ProductName") or "?" for line in lines if line.get("Undeliverable")]
+    return (change or None), undeliverable

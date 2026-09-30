@@ -105,9 +105,9 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 | --- | --- |
 | `search QUERY... [--limit] [--offset] [--slot] [--cheaper-than ID...]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list. `--cheaper-than` takes one basket product id per query and keeps only what costs less per kg, l or piece (not per pack), offers included, and applies the `keep` and `avoid` rules in the preferences |
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
-| `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots |
+| `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots. `reserve` accepts the new slot's prices and prints how the basket total changed and what it can't deliver |
 | `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID` | Order history |
-| `favourites`, `offers [--limit] [--slot]` | Favourites and offers |
+| `favourites`, `offers [--limit] [--slot] [--category C...] [--min-discount PCT] [--categories]` | Favourites and offers. `--category` keeps a top or sub category (`koed`, `kylling`; `kød` works too), `--min-discount` keeps offers at least that many percent off, and `--categories` counts the offers per category instead |
 | `lists`, `lists show ID`, `lists create NAME`, `lists set LIST_ID ID:QTY...`, `lists delete ID --yes`, `lists to-basket ID` | Shopping lists |
 | `prefs`, `prefs keep [--id] [--brand] [--name] [--note]`, `prefs avoid ...` | Household preferences, and rules for products never to replace (`keep`) or never to suggest (`avoid`) |
 | `status`, `login`, `logout` | Session |
@@ -115,7 +115,9 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 - **Output.** JSON with null and empty fields, image URLs and slugs left out. Basket changes
   print the resulting basket. Basket lines in JSON carry the unit price (`kr/kg`, `kr/l`),
   labels and offer, as search results do; `--text` leaves them out. A search product on offer
-  also has `offer_unit_price`, the unit price when buying the offer's quantity.
+  also has `offer_unit_price`, the unit price when buying the offer's quantity. Offers and
+  favourites have `discount`, the percent off, from the price before the offer or a
+  multi-buy deal.
 - **Several items per call.** `basket add/set/remove` and `lists set` apply their items in order.
   If one fails, the error lists the items that were already `applied`, so an agent can recover
   without adding twice.
@@ -137,8 +139,11 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 playbook: compact `--text` output, one multi-query `search` and one `basket add` per batch, how to choose
 products, and how to recover from errors. Claude Code picks it up automatically inside this repo.
 [`nemlig-cheaper`](.claude/skills/nemlig-cheaper/SKILL.md) builds on it: it compares unit
-prices for what is in the basket and proposes cheaper swaps. Both read the household
-preferences with `nemlig prefs`, and record lasting corrections as `keep` and `avoid` rules.
+prices for what is in the basket and proposes cheaper swaps.
+[`nemlig-dinners`](.claude/skills/nemlig-dinners/SKILL.md) makes up varied dinners around the
+current offers, agrees on the anchor offers and the dishes with the user, and adds the
+ingredients. They all read the household preferences with `nemlig prefs`, and record lasting
+corrections as `keep` and `avoid` rules.
 
 To shop from any directory, install the command and the skills for your user:
 
@@ -146,6 +151,7 @@ To shop from any directory, install the command and the skills for your user:
 uv tool install --editable .                       # puts `nemlig` on PATH
 ln -s "$PWD/.claude/skills/nemlig-shopping" ~/.claude/skills/nemlig-shopping
 ln -s "$PWD/.claude/skills/nemlig-cheaper" ~/.claude/skills/nemlig-cheaper
+ln -s "$PWD/.claude/skills/nemlig-dinners" ~/.claude/skills/nemlig-dinners
 cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
 ```
 

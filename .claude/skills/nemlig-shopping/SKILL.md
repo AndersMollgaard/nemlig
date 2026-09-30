@@ -112,7 +112,8 @@ In order of priority:
 
 - Skip anything marked `SOLD OUT`. Pick the closest alternative and mention the swap.
 - Mention an offer (`offer: 2 for 58 kr (29.00 kr/l)`) when it changes what the best buy is,
-  e.g. buying 2. The bracket is the unit price when buying the offer's quantity.
+  e.g. buying 2. The bracket is the unit price when buying the offer's quantity. In `offers`
+  and `favourites`, `-30%` after the price is the discount.
 - "500 g hakket oksekød" means a pack of about that size, not a quantity of 500. Weigh the
   quantity against the pack description (`1 kg`, `10 stk.`).
 - Ask before adding only when a wrong guess would be costly or unwanted: a big price
@@ -133,7 +134,8 @@ In order of priority:
 - To correct a quantity, use `set`. It is absolute, so it is safe to repeat.
 - Product ids are strings of digits, taken from search, basket or order output. Never guess one.
 - Don't run `basket clear --yes`, `lists delete --yes` or `delivery reserve` unless the user
-  asked for it in this conversation. Clearing the basket keeps the reserved delivery slot.
+  asked for it in this conversation. Choosing a delivery slot for `nemlig-dinners` counts as
+  asking for it to be reserved. Clearing the basket keeps the reserved delivery slot.
 
 ## Reporting
 
@@ -153,7 +155,8 @@ last `basket` command printed.
 
 ## Sub-skills
 
-`nemlig-cheaper` (and later ones) do one job each on top of this skill. Every sub-skill starts
+`nemlig-cheaper` (cheaper swaps) and `nemlig-dinners` (dinners from the offers) do one job each
+on top of this skill. Every sub-skill starts
 with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the rules here.
 
 - **Alone** (the user asked for it): it reports to the user as in *Reporting* and applies what
@@ -173,13 +176,16 @@ with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the ru
 
 ```sh
 nemlig --text offers --limit 20                     # offers for the basket's delivery slot
+nemlig --text offers --category koed kylling --min-discount 20 --limit 0
+                                                    # offers in those categories (top or sub), 20%+ off
+nemlig --text offers --categories                   # offer counts per category and sub-category
 nemlig --text search Q1 Q2 --cheaper-than ID1 ID2   # only what costs less per kg/l/stk than those basket lines
 nemlig --text prefs                                 # preferences, keep and avoid rules
 nemlig --text offers --slot SLOT_ID                 # another slot's offers, without reserving it
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)
 nemlig --text delivery --available --days 3         # bookable slots: SLOT_ID time price
-nemlig --text delivery reserve SLOT_ID              # only when asked
+nemlig --text delivery reserve SLOT_ID              # only when asked; prints the basket's price change and undeliverable lines
 nemlig --help                                       # everything else
 ```
 
