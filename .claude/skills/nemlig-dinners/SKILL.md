@@ -141,6 +141,16 @@ added before both.
       (`nemlig --text delivery --available --days 3 --start DAY`), and ask. A different slot
       can have different offers, so check the anchors against it with
       `offers --slot NEW_ID` before adding.
+
+      A successful reservation can end in notes: `reserved: fre. 02/10 kl. 17-18 (basket
+      -91.21 kr; undeliverable: Peberfrugt rød)`. These are about lines already in the basket,
+      now at the new slot's prices.
+      - **Undeliverable:** the new slot won't bring these lines. If a dish relied on one (step 6
+        counted basket lines as at home), add a replacement from the step-6 search to this
+        `basket add`, or search once for just those items. Either way, list the undeliverable
+        lines in the report so the user can decide about the rest.
+      - **Price change:** mention it in the report ("moving to Friday made the basket 91.21 kr
+        cheaper").
    2. Run one `basket add` for the chosen dishes, with the ids and quantities from step 6.
       Don't search again. Report as in the base skill, with one line per night (dish, cost).
       Take the basket total, the minimum-order line and the slot from that output. The slot
