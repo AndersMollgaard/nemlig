@@ -1,0 +1,24 @@
+# Household preferences for the nemlig skills. Copy to preferences.toml (gitignored, next to
+# .env) and fill in what applies; `nemlig prefs` shows what the CLI reads. Everything here is a
+# hard constraint for the skills.
+
+# Free text, read and judged by Claude.
+# household = "2 adults, 1 child"
+# diet = "No pork."
+# always = "Øko milk and eggs. Laktosefri yoghurt."
+# budget = "About 1200 kr a week."
+
+# Rules, applied by `nemlig search --cheaper-than`. A rule matches a product when every field
+# it sets matches: `id` exactly, `brand` ignoring case, and `name` as part of the product
+# name. `note` says why. Add rules here or with `nemlig prefs keep|avoid --brand ... --name ...`.
+
+# Never replace these basket lines.
+# [[keep]]
+# brand = "Peter Larsen Kaffe"
+# note = "the one we like"
+
+# Never suggest these as a replacement.
+# [[avoid]]
+# brand = "First Price"
+# name = "toiletpapir"
+# note = "too thin"

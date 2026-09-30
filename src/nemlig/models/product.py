@@ -118,6 +118,8 @@ class SearchResult(Model):
     total: int
     """Number of matching products in total, not just in this page."""
     products: list[Product]
+    skipped: str | None = None
+    """Why the search was not run, e.g. a keep rule in the preferences."""
 
     @classmethod
     def from_api(cls, d: dict[str, Any], query: str) -> SearchResult:

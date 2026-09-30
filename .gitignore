@@ -1,4 +1,5 @@
 .env
+preferences.toml
 __pycache__/
 research/probe_cookies.pkl
 .venv/

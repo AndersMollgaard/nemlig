@@ -21,3 +21,5 @@ NEMLIG_LIVE=1 uv run pytest -m live       # real site with the .env account; onl
   adding one.
 - When CLI behaviour changes, update `README.md` and `.claude/skills/nemlig-shopping/SKILL.md`.
 - `.env` holds real credentials. Never print it or commit it.
+- `preferences.toml` (gitignored, next to `.env`) is the household's. Never commit it; use a
+  scratch copy via `NEMLIG_PREFS_FILE` when testing.

@@ -41,26 +41,40 @@ Round trips matter most. Every step below is meant to save one.
 
 ## Preferences
 
-`~/.config/nemlig/preferences.md` (under `$XDG_CONFIG_HOME` if set) holds what the household
-always wants. Read it once per session, before choosing products. It may not exist yet.
+`preferences.toml` (next to the `.env`, so the repo root; gitignored) holds what the household
+always wants. Read it once per session, before choosing products: `nemlig --text prefs` prints
+it and its path, or says it isn't created yet (then copy `preferences.example.toml` from the
+repo root, or let the first `prefs keep`/`avoid` create it).
 
-```markdown
-## Household
-2 adults, 1 child
-## Diet
-No pork.
-## Always
-Øko milk and eggs. Laktosefri yoghurt.
-## Never swap
-Arla Lærkevang, Lavazza coffee.
-## Budget
-About 1200 kr a week.
+```toml
+household = "2 adults, 1 child"
+diet = "No pork."
+always = "Øko milk and eggs. Laktosefri yoghurt."
+budget = "About 1200 kr a week."
+
+[[keep]]                        # never replace these basket lines
+brand = "Peter Larsen Kaffe"
+
+[[avoid]]                       # never suggest these instead of something
+brand = "First Price"
+name = "toiletpapir"
+note = "too thin"
 ```
 
-- Its rules are hard constraints, the same as what the user says in the conversation.
-- When the user corrects you in a way that will hold next time ("we always buy X", "never
-  pork"), add it under the right heading (create the file if needed) and mention it in the
-  report. Don't record one-off choices.
+- Everything in it is a hard constraint, the same as what the user says in the conversation.
+- A `keep` or `avoid` rule matches a product when every field it sets matches: `id` exactly,
+  `brand` ignoring case, and `name` as part of the product name. Use `name` to narrow a brand
+  to one kind of product.
+- `search --cheaper-than` applies the rules itself. Plain `search` doesn't, so skip avoided
+  products yourself when choosing.
+- When the user corrects you in a way that will hold next time, record it, and mention it in
+  the report. Don't record one-off choices.
+  - "Don't touch the coffee", "we always buy that one":
+    `nemlig prefs keep --brand "Peter Larsen Kaffe" --note "the one we like"`
+  - "Not that one again", "that brand is too thin":
+    `nemlig prefs avoid --brand "First Price" --name toiletpapir --note "too thin"`
+  - Household, diet, always and budget are free text. Edit them in the file at the path that
+    `prefs` prints.
 
 ## Core loop: "put these things in my basket"
 
@@ -86,7 +100,7 @@ lines and `basket add` the ones you want.
 
 In order of priority:
 
-1. **What the user said, and the preferences file.** Size, brand, fat %, øko, laktosefri and
+1. **What the user said, and the preferences.** Size, brand, fat %, øko, laktosefri and
    similar are hard constraints.
 2. **What the household buys.** If the user has an order history, a product they bought before
    or marked as a favourite beats a new one. Look it up when the item is ambiguous, e.g. milk
@@ -160,6 +174,7 @@ with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the ru
 ```sh
 nemlig --text offers --limit 20                     # offers for the basket's delivery slot
 nemlig --text search Q1 Q2 --cheaper-than ID1 ID2   # only what costs less per kg/l/stk than those basket lines
+nemlig --text prefs                                 # preferences, keep and avoid rules
 nemlig --text offers --slot SLOT_ID                 # another slot's offers, without reserving it
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)

@@ -11,12 +11,13 @@ here and are not repeated.
 
 ## Flow
 
-1. **Preferences.** Read `~/.config/nemlig/preferences.md` if it exists. `Always` and
-   `Never swap` are hard constraints. `Household` sets reasonable pack sizes.
+1. **Preferences:** `nemlig --text prefs`. `always` and `diet` are hard constraints, and
+   `household` sets reasonable pack sizes. `keep` and `avoid` rules are applied by the CLI in
+   step 4.
 2. **Basket, as JSON, once:** `nemlig basket`. Each line has `unit_price`, `unit_price_label`,
    `labels` (øko, laktosefri...), `offer` and `description` (pack size). JSON is needed here;
    `--text` leaves these out.
-3. **Pick the lines to check.** Skip sold-out lines, `Never swap` brands, and lines that are
+3. **Pick the lines to check.** Skip sold-out lines, lines a `keep` rule matches, and lines that are
    already a budget product with nothing plainer to swap to. For each remaining line, write
    one generic Danish query that keeps what defines it: "øko minimælk", "laktosefri
    letmælk", "hakket oksekød 8-12%", "havregryn". Don't search the product name verbatim;
@@ -30,8 +31,9 @@ here and are not repeated.
    kr/kg), and cheaper per kg, l or piece than the line, offers included. It compares
    `kr/kg`, never the shelf price, so a bigger pack can pass while costing more in total, and
    a multi-buy offer passes even if it needs 3 bought. Step 7 sorts that out. `kr/stk` is
-   crude: a small and a large cauliflower are both 1 stk. `0 of 38 results` means nothing is
-   cheaper. If the user plans a delivery slot other than the basket's, add
+   crude: a small and a large cauliflower are both 1 stk. It also drops products an `avoid`
+   rule matches, and for a line a `keep` rule matches it prints `skipped '<query>': keep
+   rule ...` instead of searching. `0 of 38 results` means nothing is cheaper. If the user plans a delivery slot other than the basket's, add
    `--slot SLOT_ID`. If a query finds nothing at all (`0 of 0`), retry just that one with a
    broader term ("rugknækbrød" → "knækbrød").
 5. **Judge the candidates per line.** Keep one only if it:
@@ -64,9 +66,17 @@ Show the proposals, the biggest saving first, and ask once which to apply:
 Cheaper swaps (saves 19.90 kr of 612.00 kr):
 1. Minimælk øko 1 l, Arla 2x → Minimælk øko 1 l, Øko 2x: 25.95 → 20.95 kr/l, saves 10.00 kr
 2. Hakket oksekød 8-12% 500 g, Coop 2x → 500 g, Danish Crown 2x (2 for 90 kr): 99.90 → 90.00 kr/kg, saves 9.90 kr
-Kept: Lavazza (never swap), Skyr (already the cheapest øko)
-Apply all, some (numbers), or none?
+Kept: Lavazza (keep rule), Skyr (already the cheapest øko)
+Apply all, some (numbers), or none? Say "never" for any you don't want suggested again.
 ```
+
+When the user turns a swap down for a reason that will hold, record it so it isn't proposed
+again, and say so:
+- Against the replacement ("never", "too thin", "we don't like that brand"): `nemlig prefs avoid`
+  for the candidate. Use `--brand` with `--name` for a brand in one kind of product, or `--id`
+  for one product.
+- For the original ("leave the coffee", "we always buy that one"): `nemlig prefs keep` for the
+  basket line.
 
 Apply the accepted swaps in **one** `basket set` call. It is absolute, so it is safe to
 repeat after an error:

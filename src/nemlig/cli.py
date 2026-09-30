@@ -18,6 +18,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from . import preferences
 from ._version import __version__
 from .client import NemligClient
 from .errors import ApiError, AuthError, NemligError, NotLoggedInError
@@ -35,6 +36,7 @@ from .models import (
     SlotReservation,
     Suggestions,
 )
+from .preferences import Preferences, Rule
 
 EXIT_ERROR = 1
 EXIT_USAGE = 2
@@ -65,6 +67,8 @@ notes:
   are left out.
   Credentials: NEMLIG_USER and NEMLIG_PASS in the environment, in --env-file, in ./.env, or in
   ~/.config/nemlig/.env. The session is saved, so later runs skip the login.
+  Preferences: preferences.toml next to that .env (or NEMLIG_PREFS_FILE). `prefs keep` and
+  `prefs avoid` add rules that search --cheaper-than applies.
 
 exit codes:
   0 ok, 1 nemlig.com or network error, 2 bad usage, 3 not logged in or login rejected.
@@ -153,9 +157,10 @@ def _basket_lines(nc: NemligClient, ids: Sequence[str], queries: Sequence[str]) 
     return [lines[pid] for pid in ids]
 
 
-def _cheaper(result: SearchResult, line: BasketLine) -> SearchResult:
+def _cheaper(result: SearchResult, line: BasketLine, prefs: Preferences) -> SearchResult:
     """Only in-stock products in the line's unit (kr/kg, kr/l, kr/stk) that cost less per kg, l or
-    piece, offers included. Shelf prices are not compared, so a bigger pack can cost more in total."""
+    piece, offers included, and that no avoid rule matches. Shelf prices are not compared, so a
+    bigger pack can cost more in total."""
     if line.unit_price is None:
         return result
 
@@ -171,15 +176,31 @@ def _cheaper(result: SearchResult, line: BasketLine) -> SearchResult:
         and p.unit_price_label == line.unit_price_label
         and (unit := best(p)) is not None
         and unit < line.unit_price
+        and not prefs.avoided(p.id, p.name, p.brand)
     ]
     return result.model_copy(update={"products": keep})
 
 
+def _search_cheaper(nc: NemligClient, a: argparse.Namespace) -> list[SearchResult]:
+    """Search only for the lines no keep rule protects, and filter what comes back."""
+    prefs = preferences.load(_prefs_file(a))
+    lines = _basket_lines(nc, a.cheaper_than, a.queries)
+    kept = [prefs.kept_by(line.product_id, line.name, line.brand) for line in lines]
+    todo = [q for q, rule in zip(a.queries, kept, strict=True) if rule is None]
+    found = iter(nc.search_many(todo, limit=a.limit, offset=a.offset, slot_id=a.slot) if todo else [])
+    return [
+        SearchResult(query=q, total=0, products=[], skipped=f"keep rule {rule.describe()}")
+        if rule is not None
+        else _cheaper(next(found), line, prefs)
+        for q, line, rule in zip(a.queries, lines, kept, strict=True)
+    ]
+
+
 def cmd_search(nc: NemligClient, a: argparse.Namespace) -> Any:
-    lines = _basket_lines(nc, a.cheaper_than, a.queries) if a.cheaper_than else None
-    results = nc.search_many(a.queries, limit=a.limit, offset=a.offset, slot_id=a.slot)
-    if lines:
-        results = [_cheaper(r, line) for r, line in zip(results, lines, strict=True)]
+    if a.cheaper_than:
+        results = _search_cheaper(nc, a)
+    else:
+        results = nc.search_many(a.queries, limit=a.limit, offset=a.offset, slot_id=a.slot)
     return results[0] if len(results) == 1 else results
 
 
@@ -280,6 +301,27 @@ def cmd_lists_delete(nc: NemligClient, a: argparse.Namespace) -> Any:
 
 def cmd_lists_to_basket(nc: NemligClient, a: argparse.Namespace) -> Any:
     return nc.add_shopping_list_to_basket(a.list_id)
+
+
+class PrefsView(BaseModel):
+    file: str
+    exists: bool
+    preferences: Preferences
+
+
+def _prefs_view(a: argparse.Namespace) -> PrefsView:
+    path = _prefs_file(a)
+    return PrefsView(file=str(path.resolve()), exists=path.is_file(), preferences=preferences.load(path))
+
+
+def cmd_prefs(nc: NemligClient, a: argparse.Namespace) -> Any:
+    return _prefs_view(a)
+
+
+def cmd_prefs_add(nc: NemligClient, a: argparse.Namespace) -> Any:
+    rule = Rule(id=a.id, brand=a.brand, name=a.name, note=a.note)
+    preferences.add_rule(_prefs_file(a), a.kind, rule)
+    return _prefs_view(a)
 
 
 def _status(nc: NemligClient) -> dict[str, Any]:
@@ -404,6 +446,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp = cmd(lsub, "to-basket", cmd_lists_to_basket, "add a list's products to the basket")
     sp.add_argument("list_id", type=int)
 
+    prefs = cmd(sub, "prefs", cmd_prefs, "household preferences, and rules for products to keep or avoid")
+    psub = prefs.add_subparsers(metavar="ACTION")
+    for kind, help in (
+        ("keep", "never replace matching basket lines (search --cheaper-than skips them)"),
+        ("avoid", "never suggest matching products as replacements (search --cheaper-than drops them)"),
+    ):
+        sp = cmd(psub, kind, cmd_prefs_add, help)
+        sp.set_defaults(kind=kind)
+        sp.add_argument("--id", help="product id")
+        sp.add_argument("--brand", help="brand, ignoring case")
+        sp.add_argument("--name", help="part of the product name, ignoring case")
+        sp.add_argument("--note", help="why, shown with the rule")
+
     cmd(sub, "status", cmd_status, "whether a login session and credentials are available")
     cmd(sub, "login", cmd_login, "log in with the configured credentials and save the session")
     cmd(sub, "logout", cmd_logout, "forget the saved session")
@@ -423,6 +478,13 @@ def _env_file(arg: str | None) -> Path:
         return local
     base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     return base / "nemlig" / ".env"
+
+
+def _prefs_file(a: argparse.Namespace) -> Path:
+    """``preferences.toml`` next to the `.env` in use, unless ``NEMLIG_PREFS_FILE`` says otherwise."""
+    if os.environ.get("NEMLIG_PREFS_FILE"):
+        return Path(os.environ["NEMLIG_PREFS_FILE"]).expanduser()
+    return _env_file(a.env_file).parent / "preferences.toml"
 
 
 def make_client(a: argparse.Namespace) -> NemligClient:
@@ -531,6 +593,15 @@ def _text_order(o: OrderSummary) -> str:
     return "\n".join(lines)
 
 
+def _text_prefs(v: PrefsView) -> str:
+    p = v.preferences
+    lines = [f"file: {v.file}" + ("" if v.exists else " (not created yet)")]
+    lines += [f"{k}: {getattr(p, k)}" for k in ("household", "diet", "always", "budget") if getattr(p, k)]
+    lines += [f"keep: {r.describe()}" for r in p.keep]
+    lines += [f"avoid: {r.describe()}" for r in p.avoid]
+    return "\n".join(lines)
+
+
 def _text_list(s: ShoppingListSummary) -> str:
     head = f"{s.id}  {s.name}  {s.product_count} products  {_kr(s.total)}"
     if not isinstance(s, ShoppingList):
@@ -546,6 +617,8 @@ def to_text(value: Any) -> str:
     if isinstance(value, list):
         return "\n".join(to_text(v) for v in value) if value else "(none)"
     if isinstance(value, SearchResult):
+        if value.skipped:
+            return f"skipped {value.query!r}: {value.skipped}"
         head = f"{len(value.products)} of {value.total} results for {value.query!r}"
         return "\n".join([head, *(_product_row(p) for p in value.products)])
     if isinstance(value, Suggestions):
@@ -568,6 +641,8 @@ def to_text(value: Any) -> str:
         return f"{'reserved' if value.reserved else 'not reserved'}: {slot}" + (
             f" ({value.message})" if value.message else ""
         )
+    if isinstance(value, PrefsView):
+        return _text_prefs(value)
     if isinstance(value, dict):
         return "\n".join(f"{k}: {v}" for k, v in value.items())
     return json.dumps(to_json(value), ensure_ascii=False, indent=2)

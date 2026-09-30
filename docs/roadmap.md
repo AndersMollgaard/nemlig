@@ -26,17 +26,22 @@ they belong to.
   basket".
 - **One report when chained.** In a chained run, sub-skills hand back their changes and proposals
   instead of reporting to the user. The orchestrator reports once.
-- **Personal data stays out of the repo.** Preferences and cached orders go under
-  `~/.config/nemlig/` (next to `session.json`, see `src/nemlig/session.py`) or `~/.cache/nemlig/`.
+- **Personal data stays out of git.** Preferences go in the gitignored `preferences.toml` next to
+  `.env` (the repo root). Cached orders go under `~/.cache/nemlig/`.
 - **Never retry writes.** This rule still applies to every skill.
 
 ## Phase 0: Foundations
 
-- [x] **Preferences file.** `~/.config/nemlig/preferences.md` holds household size, diet (e.g. no
-  pork), hard constraints (øko milk), brands never to swap, and a budget. Document it in the base
-  skill. Skills read it at the start and add to it when the user corrects them.
-  - Decided: fixed headings (`Household`, `Diet`, `Always`, `Never swap`, `Budget`). Skills read
-    the file directly; there is no CLI command for it. Only lasting corrections are recorded.
+- [x] **Preferences file.** It holds household size, diet (e.g. no pork), hard constraints (øko
+  milk), products never to swap, and a budget. Document it in the base skill. Skills read it at
+  the start and add to it when the user corrects them.
+  - Decided (2026-09-30, replacing a first `~/.config/nemlig/preferences.md`): `preferences.toml`
+    next to `.env`, so the repo root, gitignored; `NEMLIG_PREFS_FILE` overrides. The free text
+    (`household`, `diet`, `always`, `budget`) is for the skills to judge. `[[keep]]` (never
+    replace) and `[[avoid]]` (never suggest) rules are enforced by `search --cheaper-than`. A
+    rule matches on `id`, `brand` and part of the `name`, all that are set. `nemlig prefs` shows
+    the file, and `prefs keep|avoid` appends rules, so skills don't hand-edit TOML. Only lasting
+    corrections are recorded.
 - [ ] **Order-history paging.** `get_orders` (`src/nemlig/client.py`) sends `page` as `skip`.
   Check live how `GetBasicOrderHistory` pages and how far back history goes. Write the findings
   in `docs/nemlig-api.md`.

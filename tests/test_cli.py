@@ -11,7 +11,7 @@ ERROR = fixture("error_copyorder_not_found.json")
 
 @pytest.fixture(autouse=True)
 def no_credentials(monkeypatch, tmp_path):
-    for name in ("NEMLIG_USER", "NEMLIG_PASS", "NEMLIG_ENV_FILE"):
+    for name in ("NEMLIG_USER", "NEMLIG_PASS", "NEMLIG_ENV_FILE", "NEMLIG_PREFS_FILE"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.chdir(tmp_path)  # no ./.env
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))  # no ~/.config/nemlig/.env
@@ -106,6 +106,42 @@ def test_search_cheaper_than_a_basket_line(api, customer, capsys):
 
     code, out, _ = run(capsys, "--text", "search", "havregryn", "--cheaper-than", "5034594")
     assert "offer: 2 for 14 kr (7.00 kr/kg)" in out
+
+
+def test_search_cheaper_than_applies_keep_and_avoid_rules(api, customer, capsys, tmp_path):
+    (tmp_path / ".env").write_text("")  # preferences.toml sits next to ./.env
+    (tmp_path / "preferences.toml").write_text(
+        '[[keep]]\nname = "popcorn"\nnote = "the kids choose"\n\n[[avoid]]\nbrand = "cheapo"\n'
+    )
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
+    search = api.get(f"{GW}/searchgateway/api/search").respond(
+        json=_search_with(
+            {"Id": "1", "Price": 6.0, "UnitPriceCalc": 6.0, "Brand": "Cheapo"},
+            {"Id": "2", "Price": 7.0, "UnitPriceCalc": 7.0},
+        )
+    )
+    argv = ["search", "popcorn", "havregryn", "--cheaper-than", "5036764", "5034594"]
+    code, out, _ = run(capsys, "--text", *argv)
+    assert code == 0
+    assert [c.request.url.params["query"] for c in search.calls] == ["havregryn"]  # popcorn is kept
+    head, *rows = out.splitlines()
+    assert head == "skipped 'popcorn': keep rule name 'popcorn' (the kids choose)"
+    assert [r.split()[0] for r in rows[1:]] == ["2"]  # Cheapo is avoided
+
+
+def test_prefs_add_and_show(capsys, tmp_path):
+    code, out, _ = run(capsys, "--text", "prefs")
+    assert code == 0 and "(not created yet)" in out
+    run(capsys, "prefs", "avoid", "--brand", "First Price", "--name", "toiletpapir", "--note", "for tynd")
+    code, out, _ = run(capsys, "--text", "prefs", "keep", "--id", "5027015")
+    assert code == 0
+    assert out.splitlines()[1:] == [
+        "keep: id '5027015'",
+        "avoid: brand 'First Price' name 'toiletpapir' (for tynd)",
+    ]
+    assert (tmp_path / "nemlig" / "preferences.toml").is_file()  # next to ~/.config/nemlig/.env
+    code, _, err = run(capsys, "prefs", "keep")
+    assert code == 2 and "at least one of id, brand or name" in err
 
 
 @pytest.mark.parametrize(

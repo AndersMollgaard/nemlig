@@ -103,12 +103,13 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 
 | Command | What |
 | --- | --- |
-| `search QUERY... [--limit] [--offset] [--slot] [--cheaper-than ID...]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list. `--cheaper-than` takes one basket product id per query and keeps only what costs less per kg, l or piece (not per pack), offers included |
+| `search QUERY... [--limit] [--offset] [--slot] [--cheaper-than ID...]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list. `--cheaper-than` takes one basket product id per query and keeps only what costs less per kg, l or piece (not per pack), offers included, and applies the `keep` and `avoid` rules in the preferences |
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
 | `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots |
 | `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID` | Order history |
 | `favourites`, `offers [--limit] [--slot]` | Favourites and offers |
 | `lists`, `lists show ID`, `lists create NAME`, `lists set LIST_ID ID:QTY...`, `lists delete ID --yes`, `lists to-basket ID` | Shopping lists |
+| `prefs`, `prefs keep [--id] [--brand] [--name] [--note]`, `prefs avoid ...` | Household preferences, and rules for products never to replace (`keep`) or never to suggest (`avoid`) |
 | `status`, `login`, `logout` | Session |
 
 - **Output.** JSON with null and empty fields, image URLs and slugs left out. Basket changes
@@ -123,6 +124,11 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 - **Credentials** come from `NEMLIG_USER` / `NEMLIG_PASS` in the environment, `--env-file`
   (or `NEMLIG_ENV_FILE`), `./.env`, or `~/.config/nemlig/.env`, in that order. The session is
   saved as with the library; `--no-session` turns that off.
+- **Preferences** live in `preferences.toml` next to that `.env` (so the repo root in a
+  checkout, where it is gitignored), or in `NEMLIG_PREFS_FILE`. It holds free text for the
+  agent (household, diet, always, budget) and `[[keep]]` and `[[avoid]]` rules. A rule matches
+  when every field it sets matches: `id`, `brand` (ignoring case) and part of the `name`. Start
+  from `cp preferences.example.toml preferences.toml`.
 
 ## Agents
 
@@ -131,8 +137,8 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 playbook: compact `--text` output, one multi-query `search` and one `basket add` per batch, how to choose
 products, and how to recover from errors. Claude Code picks it up automatically inside this repo.
 [`nemlig-cheaper`](.claude/skills/nemlig-cheaper/SKILL.md) builds on it: it compares unit
-prices for what is in the basket and proposes cheaper swaps. Both read household preferences
-from `~/.config/nemlig/preferences.md`.
+prices for what is in the basket and proposes cheaper swaps. Both read the household
+preferences with `nemlig prefs`, and record lasting corrections as `keep` and `avoid` rules.
 
 To shop from any directory, install the command and the skills for your user:
 
