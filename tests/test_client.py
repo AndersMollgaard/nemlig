@@ -170,8 +170,51 @@ def test_orders(api, customer):
     history = api.get(f"{WWW}/webapi/order/GetBasicOrderHistory").respond(json=fixture("order_history.json"))
     api.get(f"{WWW}/webapi/v2/order/GetOrderHistory/10000001").respond(json=fixture("order_lines.json"))
     orders = customer.get_orders(limit=2, page=3)
-    assert params(history) == {"skip": "3", "take": "2"}
+    assert params(history) == {"skip": "4", "take": "2"}  # an offset, not a page number
     assert customer.get_order(orders[0].id).lines[0].product_id == "5027015"
+
+
+def test_orders_past_the_last_page(api, customer):
+    # The API answers a page past the end with the last page again.
+    api.get(f"{WWW}/webapi/order/GetBasicOrderHistory").respond(json=fixture("order_history.json"))
+    assert customer.get_orders(limit=2, page=69) == []
+
+
+def history_page(start, count, total):
+    orders = [
+        {"Id": i, "Status": 3, "DeliveryTime": {"Start": "2026-09-21T10:00:00", "End": "2026-09-21T15:00:00"}}
+        for i in range(start, start + count)
+    ]
+    return {"Orders": orders, "NumberOfPages": -(-total // 100)}
+
+
+def test_all_orders_page_by_offset(api, customer):
+    route = api.get(f"{WWW}/webapi/order/GetBasicOrderHistory").mock(
+        side_effect=[
+            httpx.Response(200, json=history_page(0, 100, 136)),
+            httpx.Response(200, json=history_page(100, 36, 136)),
+        ]
+    )
+    assert [o.id for o in customer.get_all_orders()] == list(range(136))
+    assert [dict(c.request.url.params)["skip"] for c in route.calls] == ["0", "100"]
+
+
+def test_all_orders_stop_at_an_exact_page(api, customer):
+    route = api.get(f"{WWW}/webapi/order/GetBasicOrderHistory").respond(json=history_page(0, 100, 100))
+    assert len(customer.get_all_orders()) == 100
+    assert route.call_count == 2  # the second answer repeats page 1 and is dropped
+
+
+def test_orders_many_keeps_the_order(api, customer):
+    lines = fixture("order_lines.json")
+    for i in (1, 2, 3):
+        api.get(f"{WWW}/webapi/v2/order/GetOrderHistory/{i}").respond(json={**lines, "Id": i})
+    assert [o.id for o in customer.get_orders_many([3, 1, 2])] == [3, 1, 2]
+
+
+def test_account_key_hides_the_customer_id(api, customer):
+    key = customer.account_key()
+    assert len(key) == 16 and "123" not in key
 
 
 def test_delivery_days_and_reservation(api, customer, basket_route):

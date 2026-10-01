@@ -181,6 +181,7 @@ nemlig --text offers --category koed kylling --min-discount 20 --limit 0
 nemlig --text offers --categories                   # offer counts per category and sub-category
 nemlig --text search Q1 Q2 --cheaper-than ID1 ID2   # only what costs less per kg/l/stk than those basket lines
 nemlig --text prefs                                 # preferences, keep and avoid rules
+nemlig --text orders sync                           # cache all finished orders locally (for restock)
 nemlig --text offers --slot SLOT_ID                 # another slot's offers, without reserving it
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)

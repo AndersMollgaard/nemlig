@@ -43,12 +43,23 @@ they belong to. Phase 5 depends only on Phase 2, so it can be done before Phases
     rule matches on `id`, `brand` and part of the `name`, all that are set. `nemlig prefs` shows
     the file, and `prefs keep|avoid` appends rules, so skills don't hand-edit TOML. Only lasting
     corrections are recorded.
-- [ ] **Order-history paging.** `get_orders` (`src/nemlig/client.py`) sends `page` as `skip`.
+- [x] **Order-history paging.** `get_orders` (`src/nemlig/client.py`) sends `page` as `skip`.
   Check live how `GetBasicOrderHistory` pages and how far back history goes. Write the findings
   in `docs/nemlig-api.md`.
-- [ ] **Local order cache.** Delivered orders don't change, so cache their lines in
+  - Found (2026-10-01): `skip` is an offset rounded down to a whole page, so `orders --page 2`
+    had been returning page 1. A `skip` past the end repeats the last page. Fixed:
+    `get_orders` sends `(page - 1) * limit` and returns nothing past `NumberOfPages`, and
+    `get_all_orders()` pages by 100. The whole history is there: 136 orders back to 2023-10-03.
+- [x] **Local order cache.** Delivered orders don't change, so cache their lines in
   `~/.cache/nemlig/orders/`. Add a command that syncs them all in parallel (e.g.
   `nemlig orders sync`). Restock needs this, and history starts building up now.
+  - Decided: `OrderCache` (`src/nemlig/order_cache.py`) writes one `Order` JSON per order under
+    `~/.cache/nemlig/orders/<account>/`. `<account>` is a hash of the customer id, so two
+    accounts never mix and the path reveals neither. An order is cached once its delivery
+    window has ended and it isn't editable, because status 3 also covers orders not delivered
+    yet. `get_orders_many` fetches lines 8 at a time, written every 16 orders, so a failed
+    sync keeps its progress. The first live sync took 3.6 s for 135 orders (4,753 lines,
+    1.1 MB), and a repeat took 0.8 s.
 - [x] **Sub-skill conventions.** Write the handoff format and the "load base first" line once, in
   the base skill.
   - Decided: the handoff is one block with `Applied:`, `Proposed:` and `Questions:`. A chained

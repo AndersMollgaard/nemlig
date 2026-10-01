@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import time
@@ -40,8 +41,9 @@ from .session import SessionStore, user_key
 
 ProductId = str | int
 
-# Concurrent requests for search_many(); enough for a shopping list, gentle on the site.
-MAX_PARALLEL_SEARCHES = 8
+# Concurrent GETs for search_many() and get_orders_many(); enough for a shopping list, gentle on the site.
+MAX_PARALLEL = 8
+ORDER_PAGE_SIZE = 100  # orders per history request; take=200 also worked (2026-10-01)
 
 # The anonymous delivery context depends on the time of day, so refetch it now and then.
 CONTEXT_TTL = 600
@@ -253,7 +255,7 @@ class NemligClient:
 
         if len(queries) <= 1:
             return [one(q) for q in queries]
-        with ThreadPoolExecutor(max_workers=min(len(queries), MAX_PARALLEL_SEARCHES)) as pool:
+        with ThreadPoolExecutor(max_workers=min(len(queries), MAX_PARALLEL)) as pool:
             return list(pool.map(one, queries))
 
     def suggest(self, query: str) -> Suggestions:
@@ -390,18 +392,59 @@ class NemligClient:
     # -- orders -------------------------------------------------------------------------------
 
     def get_orders(self, limit: int = 10, page: int = 1) -> list[OrderSummary]:
-        """Past orders, newest first. ``page`` is 1-based, with ``limit`` orders per page."""
+        """Past orders, newest first. ``page`` is 1-based, with ``limit`` orders per page.
+
+        The API's ``skip`` is an offset that it rounds down to a whole page, and a page past the
+        end returns the last page again, so that case is caught with ``NumberOfPages``.
+        """
         self._require_login()
+        page = max(page, 1)
         data = self._http.get(
-            f"{WWW}/webapi/order/GetBasicOrderHistory", params={"skip": max(page, 1), "take": limit}
+            f"{WWW}/webapi/order/GetBasicOrderHistory", params={"skip": (page - 1) * limit, "take": limit}
         )
-        return [OrderSummary.from_api(o) for o in (data or {}).get("Orders") or []]
+        data = data if isinstance(data, dict) else {}
+        if page > int(data.get("NumberOfPages") or 0):
+            return []
+        return [OrderSummary.from_api(o) for o in data.get("Orders") or []]
+
+    def get_all_orders(self) -> list[OrderSummary]:
+        """The whole order history, newest first. It goes back years, in a few requests."""
+        orders: list[OrderSummary] = []
+        page = 1
+        while True:
+            batch = self.get_orders(limit=ORDER_PAGE_SIZE, page=page)
+            orders += batch
+            if len(batch) < ORDER_PAGE_SIZE:
+                return orders
+            page += 1
 
     def get_order(self, order_id: int) -> Order:
         """One past order with its product lines. ``order_id`` is `OrderSummary.id`."""
         self._require_login()
+        return self._order(order_id)
+
+    def get_orders_many(self, order_ids: Sequence[int]) -> list[Order]:
+        """Several orders with their lines, fetched in parallel, in the order of ``order_ids``.
+
+        Like `search_many`, the threads only send GETs. If any fetch fails, the error is raised.
+        """
+        self._require_login()
+        if len(order_ids) <= 1:
+            return [self._order(i) for i in order_ids]
+        with ThreadPoolExecutor(max_workers=min(len(order_ids), MAX_PARALLEL)) as pool:
+            return list(pool.map(self._order, order_ids))
+
+    def _order(self, order_id: int) -> Order:
         data = self._http.get(f"{WWW}/webapi/v2/order/GetOrderHistory/{int(order_id)}")
         return Order.from_api(_object(data, "order"))
+
+    def account_key(self) -> str:
+        """A stable id for the logged-in account that reveals nothing about it (a hash of the
+        customer id), e.g. to keep each account's cached orders apart."""
+        debitor = self._token(require_login=True).debitor_id
+        if not debitor:
+            raise NotLoggedInError("the session has no customer id")
+        return hashlib.sha256(f"nemlig-customer:{debitor}".encode()).hexdigest()[:16]
 
     def reorder(self, order_id: int) -> Basket:
         """Add every product of a past order to the basket, on top of what is there.

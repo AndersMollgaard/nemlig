@@ -64,7 +64,7 @@ driver notes, order numbers) is never mapped into the models.
 | Search | `search(query, limit, offset, slot_id)`, `search_many(queries, limit, offset, slot_id)` (parallel), `suggest(query)`, `get_product(id_or_slug)` |
 | Basket | `get_basket()`, `add_to_basket(id, qty)` (additive, negative subtracts), `set_quantity(id, qty)` (absolute), `remove_from_basket(id)`, `remove_sold_out()`, `clear_basket()` |
 | Delivery | `get_delivery_days(days, start)`, `reserve_slot(slot_id)`, `get_slot_context(slot_id)` |
-| Orders | `get_orders(limit, page)`, `get_order(order_id)`, `reorder(order_id)` |
+| Orders | `get_orders(limit, page)`, `get_all_orders()`, `get_order(order_id)`, `get_orders_many(ids)` (parallel), `reorder(order_id)`; `OrderCache().sync(client)` and `.load(client.account_key())` keep finished orders in `~/.cache/nemlig/orders` |
 | Favourites and offers | `get_favourites()`, `get_offers(limit, slot_id)` |
 | Shopping lists | `get_shopping_lists()`, `get_shopping_list(id)`, `create_shopping_list(name)`, `set_shopping_list_item(list_id, product_id, qty)`, `delete_shopping_list(id)`, `add_shopping_list_to_basket(id)` |
 
@@ -106,7 +106,7 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 | `search QUERY... [--limit] [--offset] [--slot] [--cheaper-than ID...]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list. `--cheaper-than` takes one basket product id per query and keeps only what costs less per kg, l or piece (not per pack), offers included, and applies the `keep` and `avoid` rules in the preferences |
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
 | `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots. `reserve` accepts the new slot's prices and prints how the basket total changed and what it can't deliver |
-| `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID` | Order history |
+| `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID`, `orders sync` | Order history. `sync` caches every finished order's lines in `~/.cache/nemlig/orders/<account>/` (or `NEMLIG_CACHE_DIR`), fetching only the ones not cached yet |
 | `favourites`, `offers [--limit] [--slot] [--category C...] [--min-discount PCT] [--categories]` | Favourites and offers. `--category` keeps a top or sub category (`koed`, `kylling`; `kød` works too), `--min-discount` keeps offers at least that many percent off, and `--categories` counts the offers per category instead |
 | `lists`, `lists show ID`, `lists create NAME`, `lists set LIST_ID ID:QTY...`, `lists delete ID --yes`, `lists to-basket ID` | Shopping lists |
 | `prefs`, `prefs keep [--id] [--brand] [--name] [--note]`, `prefs avoid ...` | Household preferences, and rules for products never to replace (`keep`) or never to suggest (`avoid`) |

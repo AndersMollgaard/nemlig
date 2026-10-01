@@ -36,6 +36,7 @@ from .models import (
     SlotReservation,
     Suggestions,
 )
+from .order_cache import OrderCache, SyncResult
 from .preferences import Preferences, Rule
 
 EXIT_ERROR = 1
@@ -263,6 +264,10 @@ def cmd_orders_reorder(nc: NemligClient, a: argparse.Namespace) -> Any:
     return nc.reorder(a.order_id)
 
 
+def cmd_orders_sync(nc: NemligClient, a: argparse.Namespace) -> Any:
+    return OrderCache().sync(nc)
+
+
 def cmd_favourites(nc: NemligClient, a: argparse.Namespace) -> Any:
     return nc.get_favourites()
 
@@ -467,6 +472,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("order_id", type=int)
     sp = cmd(osub, "reorder", cmd_orders_reorder, "add every product of a past order to the basket")
     sp.add_argument("order_id", type=int)
+    cmd(osub, "sync", cmd_orders_sync, "cache every finished order's lines locally (~/.cache/nemlig/orders)")
 
     cmd(sub, "favourites", cmd_favourites, "the account's favourite products")
 
@@ -701,6 +707,12 @@ def to_text(value: Any) -> str:
         return f"{state}: {slot}" + (f" ({'; '.join(notes)})" if notes else "")
     if isinstance(value, PrefsView):
         return _text_prefs(value)
+    if isinstance(value, SyncResult):
+        span = f", {value.first} to {value.last}" if value.first else ""
+        return (
+            f"{value.cached} of {value.orders} orders cached ({value.fetched} new, "
+            f"{value.pending} not finished){span}\n{value.path}"
+        )
     if isinstance(value, OfferCategory):
         return f"{value.name} {value.count}" + (
             ": " + ", ".join(f"{k} {v}" for k, v in value.sub.items()) if value.sub else ""

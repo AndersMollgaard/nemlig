@@ -11,8 +11,9 @@ ERROR = fixture("error_copyorder_not_found.json")
 
 @pytest.fixture(autouse=True)
 def no_credentials(monkeypatch, tmp_path):
-    for name in ("NEMLIG_USER", "NEMLIG_PASS", "NEMLIG_ENV_FILE", "NEMLIG_PREFS_FILE"):
+    for name in ("NEMLIG_USER", "NEMLIG_PASS", "NEMLIG_ENV_FILE", "NEMLIG_PREFS_FILE", "NEMLIG_CACHE_DIR"):
         monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))  # no ~/.cache/nemlig
     monkeypatch.chdir(tmp_path)  # no ./.env
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))  # no ~/.config/nemlig/.env
 
@@ -303,6 +304,18 @@ def test_offers_categories(offers_route, capsys):
         {"name": "Frost", "count": 1, "sub": {"Koed": 1}},
         {"name": "Frugt-og-groent", "count": 1, "sub": {"Frugt": 1}},
     ]
+
+
+def test_orders_sync(api, customer, capsys, tmp_path):
+    api.get(f"{WWW}/webapi/order/GetBasicOrderHistory").respond(json=fixture("order_history.json"))
+    lines = fixture("order_lines.json")
+    for i in (10000001, 10000002):
+        api.get(f"{WWW}/webapi/v2/order/GetOrderHistory/{i}").respond(json={**lines, "Id": i})
+    code, out, _ = run(capsys, "orders", "sync", "--text")
+    assert code == 0
+    head, path = out.splitlines()
+    assert head == "2 of 2 orders cached (2 new, 0 not finished), 2026-09-11 to 2026-09-21"
+    assert path.startswith(str(tmp_path / "cache" / "nemlig" / "orders"))
 
 
 def test_status_anonymous(api, anonymous, capsys):

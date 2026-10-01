@@ -147,7 +147,7 @@ Example responses: see [`fixtures/`](fixtures/).
 | Add on top of the current quantity | Same endpoint, `{productId, quantity, addToExisting: true}` | Cookie | **Adds.** 1 + 2 = 3, then +1 = 4. A negative quantity subtracts (3 − 1 = 2) | Tested |
 | Remove a quantity-0 line | Same endpoint, `{ProductId, quantity: 0, AffectPartialQuantity: true}` | Cookie | Needed for sold-out lines left at quantity 0 (see gotchas) | Tested |
 | Clear basket | `POST www/webapi/basket/ClearBasket` | Cookie | Empties the lines. **The reserved slot stays reserved** | Tested |
-| Order history | `GET www/webapi/order/GetBasicOrderHistory?skip&take` | Cookie | Numeric `Id` and `OrderNumber` per order. Delivered orders showed `Status: 3` | Tested |
+| Order history | `GET www/webapi/order/GetBasicOrderHistory?skip&take` | Cookie | Numeric `Id` and `OrderNumber` per order, and `NumberOfPages`. `skip` is an offset rounded down to a page (see findings). Every order showed `Status: 3` | Tested |
 | Order lines | `GET www/webapi/v2/order/GetOrderHistory/{Id}` | Cookie | `Lines[].ProductNumber` works as a basket product id | Tested |
 | Latest order | `GET www/webapi/order/GetLatestOrderHistory` | Cookie | `includeCanceled` | Repos |
 | Reorder in one call | `POST www/webapi/order/CopyOrder` | Cookie | `{OrderNumber: "<numeric Id>"}`. **The field takes the numeric `Id`**; the real order number gives `400 Order not found`. It merges the whole order into the basket additively (18/18 lines) and keeps the reserved slot | Tested |
@@ -258,9 +258,15 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
   `<text>-<id>` path such as `/p-5050406` answers `301` to the canonical slug. The redirect drops
   the query string, so `GetAsJson=1` must be sent again. An unknown id redirects to
   `/?search=p#404`.
-- **Order history paging:** `skip` is a **1-based page number** and `take` the page size, not an
-  offset. `skip=0` and `skip=1` both return page 1.
-- **Shopping list paging:** unlike order history, `GetShoppingLists`' `skip` counts lists, not
+- **Order history paging** (corrected 2026-10-01; an earlier note here called `skip` a page
+  number): `skip` is an **offset that the server rounds down to a whole page** of `take`. With
+  `take=5`, `skip` 0–4 give orders 1–5, 5–9 give orders 6–10, and `skip=7` starts at order 6.
+  A `skip` **past the end returns the last page again**, not an empty one, so stop on
+  `NumberOfPages`. `take=200` returned the whole history in one call: 136 orders back to
+  2023-10-03 (first order on the account), with `NumberOfPages: 1`. Every order was
+  `Status: 3`, **including one due later that same day**, so status 3 doesn't prove delivery.
+  The delivery window (`DeliveryTime.End`) and `IsEditable` do.
+- **Shopping list paging:** like order history, `GetShoppingLists`' `skip` counts lists, not
   pages, and the site sends `skip=0` for the first page. With one list, `take=1&skip=1` is empty
   but `take=2&skip=1` still returns it, so the server seems to round `skip` down to a page
   boundary. `NumberOfPages` is 0 on an empty page.
