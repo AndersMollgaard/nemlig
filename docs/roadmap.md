@@ -4,10 +4,11 @@ The goal is for Claude to propose and fill a week's basket:
 
 - cheaper swaps for what is in the basket,
 - dinners built on the current offers,
-- items that are due for restocking, predicted from order history.
+- items that are due for restocking, predicted from order history,
+- recipes for the planned dinners, as a page to cook from.
 
 Work through the phases in order and tick the boxes as steps land. Note decisions under the step
-they belong to.
+they belong to. Phase 5 depends only on Phase 2, so it can be done before Phases 3 and 4.
 
 ## Principles
 
@@ -111,7 +112,7 @@ order. Single-price offers are now handled by `offer_unit_price` (see box 4).
   with linked products. Decide between nemlig's recipes and dishes Claude makes up. Write the
   result in `docs/nemlig-api.md`.
   - Decided (2026-09-30, by the user): Claude makes up the dishes. The recipes were not probed.
-- [ ] Skill flow: read preferences (household size, diet), fetch dinner-relevant offers (meat,
+- [x] Skill flow: read preferences (household size, diet), fetch dinner-relevant offers (meat,
   fish, vegetables) and pick N dinners. Build the ingredient list and skip what is in the basket
   or was bought recently (pantry staples). Then one `search` and one `basket add`.
 
@@ -133,6 +134,9 @@ order. Single-price offers are now handled by `offer_unit_price` (see box 4).
     `not reserved`. Chained without a slot, it hands back the question rather than guessing.
 
 Done when it proposes N plausible dinners for a given slot, most of them built around offers.
+Confirmed by the user on live runs (2026-09-30 and 2026-10-01). The first run filled the basket
+without reserving the slot. Since then the skill reserves the slot before adding, and
+`reserve_slot` confirms with `UpdateDeliveryTime` when the new slot changes prices.
 
 ## Phase 3: `nemlig-fill-basket` (orchestrator)
 
@@ -166,6 +170,29 @@ its own.
   P(due), last bought. It skips what is already in the basket.
 - [ ] **Skill.** Write `nemlig-restock` and plug it into the orchestrator in place of the Phase 3
   stopgap.
+
+## Phase 5: `nemlig-recipes` (recipe artifacts)
+
+- [ ] **Skill.** `nemlig-recipes` turns the chosen dinners into one recipe artifact: a private
+  claude.ai page with a card per night. Each card has the dish, time, portions (from
+  `household`), the ingredients with amounts, and the steps. Ingredients are marked as bought
+  on nemlig (name and pack) or assumed at home. A dish that uses another night's leftovers
+  says so. Load `artifact-design` before writing the page. It must work on a phone and print
+  cleanly.
+  - Input: the dishes and picks from `nemlig-dinners` in the same conversation. Alone ("make
+    recipes for this week's dinners"), it takes the dishes from the user and reads the basket
+    for what was bought. It doesn't guess dishes from basket lines.
+  - Its description is narrow ("recipes", "recipe page", "how do I cook these"). It doesn't
+    trigger on "what's for dinner".
+  - Decide when building: whether a new week's recipes go to a new page or update the same one,
+    and whether the page gets a shared checklist for ingredients and steps.
+- [ ] **Hook in `nemlig-dinners`.** After the basket add and the report, it offers the recipes
+  in one line ("Want the recipes as a page?") and loads `nemlig-recipes` on a yes. It doesn't
+  publish without asking. Chained, it doesn't offer. The orchestrator asks once at the end of
+  its report instead.
+
+Done when a real dinner run ends with one yes and a recipe page that matches what went into the
+basket.
 
 ## In every phase
 
