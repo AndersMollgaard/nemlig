@@ -142,7 +142,9 @@ products, and how to recover from errors. Claude Code picks it up automatically 
 prices for what is in the basket and proposes cheaper swaps.
 [`nemlig-dinners`](.claude/skills/nemlig-dinners/SKILL.md) makes up varied dinners around the
 current offers, agrees on the anchor offers and the dishes with the user, and adds the
-ingredients. They all read the household preferences with `nemlig prefs`, and record lasting
+ingredients. [`nemlig-fill-basket`](.claude/skills/nemlig-fill-basket/SKILL.md) chains them
+for a week's basket: it restocks the usual items from the last orders, runs the dinners, then
+proposes cheaper swaps for the whole basket in one report. They all read the household preferences with `nemlig prefs`, and record lasting
 corrections as `keep` and `avoid` rules.
 
 To shop from any directory, install the command and the skills for your user:
@@ -152,6 +154,7 @@ uv tool install --editable .                       # puts `nemlig` on PATH
 ln -s "$PWD/.claude/skills/nemlig-shopping" ~/.claude/skills/nemlig-shopping
 ln -s "$PWD/.claude/skills/nemlig-cheaper" ~/.claude/skills/nemlig-cheaper
 ln -s "$PWD/.claude/skills/nemlig-dinners" ~/.claude/skills/nemlig-dinners
+ln -s "$PWD/.claude/skills/nemlig-fill-basket" ~/.claude/skills/nemlig-fill-basket
 cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
 ```
 

@@ -1,6 +1,6 @@
 ---
 name: nemlig-shopping
-description: Shop on nemlig.com (Danish online grocery) for the user with the `nemlig` CLI. Finds products, fills and adjusts the basket, reorders past orders, uses favourites and shopping lists, and shows delivery slots. Use when the user wants groceries found, added, removed, compared or reordered, or asks what is in their nemlig basket. Checkout is not possible; the user pays in the browser.
+description: Shop on nemlig.com (Danish online grocery) for the user with the `nemlig` CLI. Finds products, adds, removes and adjusts basket items, reorders past orders, uses favourites and shopping lists, and shows delivery slots. Use when the user wants groceries found, added, removed, compared or reordered, or asks what is in their nemlig basket. Checkout is not possible; the user pays in the browser.
 allowed-tools: Bash(nemlig:*), Bash(uv run nemlig:*)
 ---
 
@@ -134,8 +134,8 @@ In order of priority:
 - To correct a quantity, use `set`. It is absolute, so it is safe to repeat.
 - Product ids are strings of digits, taken from search, basket or order output. Never guess one.
 - Don't run `basket clear --yes`, `lists delete --yes` or `delivery reserve` unless the user
-  asked for it in this conversation. Choosing a delivery slot for `nemlig-dinners` counts as
-  asking for it to be reserved. Clearing the basket keeps the reserved delivery slot.
+  asked for it in this conversation. Choosing a delivery slot for `nemlig-dinners` or
+  `nemlig-fill-basket` counts as asking for it to be reserved. Clearing the basket keeps the reserved delivery slot.
 
 ## Reporting
 
@@ -156,13 +156,14 @@ last `basket` command printed.
 ## Sub-skills
 
 `nemlig-cheaper` (cheaper swaps) and `nemlig-dinners` (dinners from the offers) do one job each
-on top of this skill. Every sub-skill starts
-with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the rules here.
+on top of this skill. `nemlig-fill-basket` chains them for a week's basket. Every sub-skill
+starts with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the rules here.
 
 - **Alone** (the user asked for it): it reports to the user as in *Reporting* and applies what
   the user accepts.
-- **Chained** (`nemlig-fill-basket` invoked it and says so): no report and no questions to the
-  user. It makes only the basket changes it was told to make, and hands back one block:
+- **Chained** (`nemlig-fill-basket` invoked it and says so): no report of its own. It makes
+  only the basket changes it was told to make, asks the user only at its own checkpoints (as
+  `nemlig-dinners` does), and hands back one block:
   ```
   Applied:
   - (basket changes made, or "none")

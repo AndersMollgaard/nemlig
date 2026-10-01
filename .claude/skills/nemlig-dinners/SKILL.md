@@ -166,10 +166,9 @@ brand"), record it as the base skill says: food rules in `diet`, products with `
 
 ## Chained: hand back
 
-Skip the checkpoints and pick the anchors and N dishes yourself. Use the slot the orchestrator
-gives, or the reserved one. If neither exists, don't guess: hand back `Applied: none`, no
-dishes, and the delivery slot under `Questions:`. Add only if the orchestrator said to, and
-then reserve the slot first as in step 8. Hand
-back the base skill's block: one `Proposed:` line per dish with its cost and product ids
-(`add 5066317:1 2301103:2 ...`). Under `Questions:`, list the assumed-at-home items worth
-checking.
+Run the flow with both checkpoints, as alone. The orchestrator settles and reserves the slot
+and gives the nights and people, so skip step 2's question and step 8's reservation. In step
+8, run the one `basket add` and don't report. Hand back the base skill's block: one
+`Applied:` line per night with the dish, its cost and the product ids added
+(`Fri: Ovnstegt kylling med citron, 131 kr: 5066317:1 2301103:2`). Under `Questions:`, list
+the assumed-at-home items worth checking.

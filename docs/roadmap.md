@@ -151,15 +151,69 @@ without reserving the slot. Since then the skill reserves the slot before adding
 
 ## Phase 3: `nemlig-fill-basket` (orchestrator)
 
-- [ ] Order: restock, then dinners, then cheaper. The cheaper pass reviews the whole basket,
-  dinner ingredients included.
-- [ ] Until Phase 4 exists, the restock step uses the base skill's "the usual" (the last 1–3
-  orders).
-- [ ] One final report: what was added and swapped, open questions, totals, the minimum order and
-  the delivery slot.
+Order: settle the slot, restock, dinners, then cheaper. Restock goes before dinners so its lines
+count as at home when the dishes are priced. Cheaper goes last because `search --cheaper-than`
+compares against basket lines, so the dinner ingredients must be in the basket before it can
+review them. Skill only: no CLI change is planned.
+
+- [x] **Skill and trigger.** Write `nemlig-fill-basket`. Its description claims "fill my basket",
+  "do the weekly shop" and "basket for the week", and no other skill does. The base skill's
+  description says it "fills and adjusts the basket", so narrow that to adding, removing and
+  adjusting items. The orchestrator works on top of the current basket and never clears it.
+- [x] **Start: one question, then reserve.** Read context in one Bash call: `prefs`, `basket`,
+  `orders --limit 3`. Take the slot and the number of nights from the request, the reserved
+  slot and `household`. Ask once, in one message, for whatever is missing, before anything is
+  added. Reserve the slot before the first add, exactly as `nemlig-dinners` step 8 does
+  (choosing it counts as asking; check for `reserved:`, stop on `not reserved`, carry the
+  undeliverable and price notes to the report). Every later step then uses the reserved
+  slot, with no `--slot` needed.
+- [x] **Restock stopgap** (until Phase 4). The base skill's "the usual", made concrete:
+  `orders show` the last 3 delivered orders in one Bash call (an order still on its way is
+  skipped, and so are its products). Add the products bought in at least 2 of
+  them, at last time's quantity, in one `basket add`. Skip lines already in the basket,
+  sold-out products, `avoid` matches and fresh meat and fish (picking those is the dinners'
+  job). Show what was added in one line above dinners' checkpoint 1, so the user sees it
+  before the first question rather than only at the end.
+- [x] **Dinners, with both checkpoints.** Load `nemlig-dinners` and run it chained, with the slot
+  and the number of nights. It keeps both checkpoints (anchors, then dishes), skips its slot
+  question because the slot is settled and reserved, adds the chosen dishes, and hands back
+  instead of reporting. Changed for this:
+  - `nemlig-dinners` *Chained*: keep the checkpoints, take the slot from the orchestrator
+    (step 8 reduces to the add), and list the added dishes under `Applied:` with their cost.
+    It used to skip the checkpoints and list dishes under `Proposed:` even when it added.
+  - `nemlig-shopping` *Sub-skills*: chained means no report and no basket changes beyond what
+    the orchestrator asked for. A sub-skill's own checkpoints still ask the user (it used to
+    say "no questions").
+  - Decided (2026-10-01, by the user): a fill-basket run goes through the dinners checkpoints.
+    The user picks the anchors and the dishes; only the final report is merged.
+- [x] **Cheaper over the whole basket.** Load `nemlig-cheaper` and run it chained, after the
+  dinner add. It reads the basket fresh, so restocked and dinner lines are both reviewed, and
+  hands back `Applied: none` and the proposals.
+- [x] **One report, one question.** Built from the last basket output and the handoff blocks:
+  ```
+  Restocked (usual items, from your last 3 orders): 2 x Minimælk øko 1 l, Rugbrød, ... (14 lines, 312.40 kr)
+  Dinners:
+  - Fri: Ovnstegt kylling med citron og kartofler, 131 kr
+  - Sat: ...
+  Cheaper swaps (saves 38.50 kr):
+  1. Hakket oksekød 8-12% 500 g, Coop → Danish Crown (2 for 90 kr): saves 9.90 kr
+  Check: is there rice at home? (assumed for 2b)
+  Basket: 1,148.20 kr (budget about 1,200 kr). Delivery fre. 02/10 17-18 (reserved).
+  Apply the swaps (all, some, none)? Anything to drop from the restock?
+  ```
+  Apply accepted swaps and drops in one `basket set`, and record "never" answers as
+  `nemlig-cheaper` does alone. Mention the minimum order when the basket is below it, and the
+  budget only when `budget` is set.
+  - Decided (2026-10-01, by the user): swaps are only proposed, and applied after one yes in
+    the report.
+  - Phase 5 adds "Want the recipes as a page?" to the same closing question.
+- [x] **Docs.** List `nemlig-fill-basket` in the base skill's *Sub-skills* and its reserve rule
+  (choosing a slot there counts as asking), and in `README.md` with its install symlink.
+- [x] **Live run.** One "fill my basket for the week" on the real account, and `nemlig-cheaper`
+  and `nemlig-dinners` alone again after their *Chained* sections changed.
 
 Done when one request produces a full basket and one report, and each sub-skill still works on
-its own.
+its own. Confirmed by the user on a live run (2026-10-01).
 
 ## Phase 4: `nemlig-restock` (predictive)
 
