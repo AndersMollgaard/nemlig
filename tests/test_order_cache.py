@@ -6,7 +6,7 @@ from conftest import WWW, fixture
 
 from nemlig import ApiError, OrderCache
 from nemlig.models import OrderSummary
-from nemlig.order_cache import is_finished
+from nemlig.order_cache import FORMAT, is_finished
 
 NOW = datetime(2026, 10, 1, 12, 0)
 
@@ -57,6 +57,8 @@ def test_sync_caches_finished_orders_once(api, customer, tmp_path):
     result = cache.sync(customer, now=NOW)
     assert (result.orders, result.cached, result.fetched, result.pending) == (3, 2, 2, 1)
     assert (str(result.first), str(result.last)) == ("2026-09-11", "2026-09-21")
+    assert result.upcoming_ids == [3]
+    assert "upcoming_ids" not in result.model_dump()
     assert not fetched[3].called
 
     again = cache.sync(customer, now=NOW)
@@ -78,3 +80,19 @@ def test_sync_keeps_what_it_fetched_before_a_failure(api, customer, tmp_path, mo
     with pytest.raises(ApiError):
         cache.sync(customer, now=NOW)
     assert cache.ids(customer.account_key()) == {2}
+
+
+def test_sync_refetches_an_older_format(api, customer, tmp_path):
+    fetched = routes(api)
+    cache = OrderCache(tmp_path)
+    cache.sync(customer, now=NOW)
+    account = customer.account_key()
+    assert (tmp_path / account / "format").read_text() == str(FORMAT)
+
+    (tmp_path / account / "format").write_text("1")
+    assert not cache.is_current(account)
+    again = cache.sync(customer, now=NOW)
+    assert (again.fetched, again.cached) == (2, 2)
+    assert fetched[1].call_count == 2
+    assert cache.is_current(account)
+    assert cache.load(account)[0].lines[0].category == "Drikke"

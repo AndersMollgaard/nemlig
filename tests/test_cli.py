@@ -11,7 +11,14 @@ ERROR = fixture("error_copyorder_not_found.json")
 
 @pytest.fixture(autouse=True)
 def no_credentials(monkeypatch, tmp_path):
-    for name in ("NEMLIG_USER", "NEMLIG_PASS", "NEMLIG_ENV_FILE", "NEMLIG_PREFS_FILE", "NEMLIG_CACHE_DIR"):
+    for name in (
+        "NEMLIG_USER",
+        "NEMLIG_PASS",
+        "NEMLIG_ENV_FILE",
+        "NEMLIG_PREFS_FILE",
+        "NEMLIG_CACHE_DIR",
+        "NEMLIG_GROUPS_FILE",
+    ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))  # no ~/.cache/nemlig
     monkeypatch.chdir(tmp_path)  # no ./.env
@@ -316,6 +323,89 @@ def test_orders_sync(api, customer, capsys, tmp_path):
     head, path = out.splitlines()
     assert head == "2 of 2 orders cached (2 new, 0 not finished), 2026-09-11 to 2026-09-21"
     assert path.startswith(str(tmp_path / "cache" / "nemlig" / "orders"))
+
+
+@pytest.fixture
+def history(api, customer):
+    """Two past orders, each with the order-lines fixture's Java Colombia and Blomkål."""
+    orders = fixture("order_history.json")
+    api.get(f"{WWW}/webapi/order/GetBasicOrderHistory").respond(json=orders)
+    lines = fixture("order_lines.json")
+    for o in orders["Orders"]:
+        api.get(f"{WWW}/webapi/v2/order/GetOrderHistory/{o['Id']}").respond(
+            json={**lines, "Id": o["Id"], "DeliveryTime": o["DeliveryTime"]}
+        )
+
+
+def test_restock(api, history, capsys):
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
+    offers = api.get(f"{GW}/productbff/api/web/page").respond(json=fixture("productbff_offers.json"))
+    code, out, _ = run(capsys, "restock", "--text", "--exclude", "Grønt")
+    assert code == 0
+    assert out.splitlines() == [
+        "due for tirs. 29/09 kl. 11-13 (add):",
+        "  5027015  Java Colombia (450 g / hele bønner / Peter Larsen Kaffe)  x2  75%  last 21/09",
+        "to review: 2 new products (nemlig restock groups)",
+    ]
+    assert offers.called
+    code, out, _ = run(capsys, "restock", "--no-offers")
+    data = json.loads(out)
+    assert [i["product_id"] for i in data["due"]] == ["5012294", "5027015"]
+    assert data["date"] == "2026-09-29" and data["to_review"] == 2
+    assert offers.call_count == 1
+
+
+def test_restock_text_rows():
+    item = {"name": "Toiletpapir", "description": "8 rl. / Lambi", "quantity": 2, "last": "2026-09-21"}
+    result = cli.restock.Restock(
+        date="2026-10-02",
+        due=[
+            cli.restock.RestockItem(
+                product_id="5019859", name="Letmælk 1,5%", quantity=3, p=0.8, last="2026-09-25", every=7
+            )
+        ],
+        maybe=[
+            cli.restock.RestockItem(product_id="5012806", p=0.41, every=16, **item),
+            cli.restock.RestockItem(product_id="5602297", p=0.18, offer="2 for 70 kr, -20%", **item),
+        ],
+        in_basket=3,
+    )
+    assert cli.to_text(result).splitlines() == [
+        "due for 2026-10-02 (add):",
+        "  5019859  Letmælk 1,5%  x3  80%  every ~7 d, last 25/09",
+        "maybe (pick by letter):",
+        "  a  5012806  Toiletpapir (8 rl. / Lambi)  x2  41%  every ~16 d, last 21/09",
+        "  b  5602297  Toiletpapir (8 rl. / Lambi)  x2  18%  last 21/09  offer: 2 for 70 kr, -20%",
+        "already in the basket: 3 due or maybe",
+    ]
+
+
+def test_restock_groups_review_and_merge(api, history, capsys, tmp_path):
+    run(capsys, "orders", "sync")
+    _, out, _ = run(capsys, "restock", "groups", "--text")
+    assert out.splitlines() == [
+        "to review: 2 groups, 2 products",
+        "  blomkål  x2  Grønt  5012294",
+        "  java colombia  x2  Drikke  5027015",
+    ]
+    _, out, _ = run(capsys, "restock", "groups", "merge", "Kaffe", "Java Colombia", "--text")
+    assert out.splitlines() == ["group: kaffe", "members: java colombia"]
+    _, out, _ = run(capsys, "restock", "groups", "reviewed", "--text")
+    assert out.strip() == "reviewed: 2"
+    _, out, _ = run(capsys, "restock", "groups", "--text")
+    assert out.splitlines() == ["named groups: kaffe", "to review: 0 groups, 0 products"]
+    saved = json.loads((tmp_path / "nemlig" / "groups.json").read_text())
+    assert saved == {"groups": {"kaffe": ["java colombia"]}, "reviewed": ["5012294", "5027015"]}
+
+
+def test_restock_backtest(api, history, capsys):
+    run(capsys, "orders", "sync")
+    code, out, _ = run(capsys, "restock", "backtest", "--last", "1", "--text")
+    assert code == 0
+    lines = out.splitlines()
+    assert lines[0].startswith("1 orders, each predicted from the ones before it. 100% of their groups")
+    assert lines[1].split() == ["method", "items", "precision", "recall"]
+    assert [line.split()[0] for line in lines[2:6]] == ["due", "due", "rate,", "stopgap"]
 
 
 def test_status_anonymous(api, anonymous, capsys):

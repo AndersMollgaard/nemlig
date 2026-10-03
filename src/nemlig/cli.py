@@ -18,9 +18,10 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from . import preferences
+from . import groups as groups_file
+from . import preferences, restock
 from ._version import __version__
-from .client import NemligClient
+from .client import SLOT_LOOKUP_DAYS, NemligClient
 from .errors import ApiError, AuthError, NemligError, NotLoggedInError
 from .models import (
     Basket,
@@ -36,6 +37,7 @@ from .models import (
     SlotReservation,
     Suggestions,
 )
+from .models._base import fold
 from .order_cache import OrderCache, SyncResult
 from .preferences import Preferences, Rule
 
@@ -278,16 +280,8 @@ class OfferCategory(BaseModel):
     sub: dict[str, int]
 
 
-def _fold(text: str) -> str:
-    """``Kød`` and ``fisk og skaldyr`` as the category slugs spell them: ``koed``, ``fisk-og-skaldyr``."""
-    text = text.strip().lower()
-    for letter, ascii_ in (("æ", "ae"), ("ø", "oe"), ("å", "aa"), (" ", "-")):
-        text = text.replace(letter, ascii_)
-    return text
-
-
 def _in_category(p: Product, wanted: set[str]) -> bool:
-    return any(_fold(part) in wanted for part in (p.category or "").split("/"))
+    return any(fold(part) in wanted for part in (p.category or "").split("/"))
 
 
 def _category_counts(products: Sequence[Product]) -> list[OfferCategory]:
@@ -308,7 +302,7 @@ def _category_counts(products: Sequence[Product]) -> list[OfferCategory]:
 def cmd_offers(nc: NemligClient, a: argparse.Namespace) -> Any:
     offers = nc.get_offers(slot_id=a.slot)
     if a.category:
-        wanted = {_fold(c) for c in a.category}
+        wanted = {fold(c) for c in a.category}
         offers = [p for p in offers if _in_category(p, wanted)]
     if a.min_discount is not None:
         offers = [p for p in offers if p.discount is not None and p.discount >= a.min_discount]
@@ -370,6 +364,74 @@ def cmd_prefs_add(nc: NemligClient, a: argparse.Namespace) -> Any:
     rule = Rule(id=a.id, brand=a.brand, name=a.name, note=a.note)
     preferences.add_rule(_prefs_file(a), a.kind, rule)
     return _prefs_view(a)
+
+
+def _cached_orders(nc: NemligClient) -> list[Order]:
+    return OrderCache().load(nc.account_key())
+
+
+def _restock_date(nc: NemligClient, basket: Basket, slot_id: int | None) -> tuple[date, str]:
+    """The delivery date to predict for, and the slot as text."""
+    if slot_id is None:
+        slot = basket.delivery_slot
+        if slot is None or slot.start is None:
+            raise UsageError("the basket has no delivery slot; pass --slot SLOT_ID")
+        label = slot.label or f"{slot.start:%d/%m %H}-{slot.end_hour:02d}"
+        return slot.start.date(), label + (
+            "" if slot.reserved and not slot.reservation_lost else " (not reserved)"
+        )
+    for day in nc.get_delivery_days(days=SLOT_LOOKUP_DAYS):
+        for s in day.slots:
+            if s.id == slot_id:
+                return s.date, f"{s.date:%d/%m} {s.start_hour:02d}-{s.end_hour:02d}"
+    raise UsageError(f"no delivery slot {slot_id} in the next {SLOT_LOOKUP_DAYS} days")
+
+
+def cmd_restock(nc: NemligClient, a: argparse.Namespace) -> Any:
+    sync = OrderCache().sync(nc)
+    basket = nc.get_basket()
+    when, slot = _restock_date(nc, basket, a.slot)
+    orders = _cached_orders(nc) + nc.get_orders_many(sync.upcoming_ids)
+    offers = [] if a.no_offers else nc.get_offers(slot_id=a.slot)
+    groups = groups_file.load(groups_file.default_groups_file())
+    result = restock.propose(
+        restock.predict(orders, groups, when),
+        groups,
+        when=when,
+        slot=slot,
+        basket=basket.lines,
+        prefs=preferences.load(_prefs_file(a)),
+        offers=offers,
+        exclude=a.exclude or (),
+    )
+    to_review = sum(len(g.ids) for g in restock.review(orders, groups).groups)
+    return result.model_copy(update={"to_review": to_review})
+
+
+def cmd_restock_groups(nc: NemligClient, a: argparse.Namespace) -> Any:
+    return restock.review(_cached_orders(nc), groups_file.load(groups_file.default_groups_file()))
+
+
+def cmd_restock_groups_merge(nc: NemligClient, a: argparse.Namespace) -> Any:
+    path = groups_file.default_groups_file()
+    groups = groups_file.load(path)
+    members = groups.merge(a.name, a.members)
+    groups_file.save(path, groups)
+    return {"group": groups_file.auto_key(a.name), "members": ", ".join(members)}
+
+
+def cmd_restock_groups_reviewed(nc: NemligClient, a: argparse.Namespace) -> Any:
+    path = groups_file.default_groups_file()
+    groups = groups_file.load(path)
+    listed = restock.review(_cached_orders(nc), groups).groups
+    count = groups.mark_reviewed(pid for g in listed for pid in g.ids)
+    groups_file.save(path, groups)
+    return {"reviewed": count}
+
+
+def cmd_restock_backtest(nc: NemligClient, a: argparse.Namespace) -> Any:
+    groups = groups_file.load(groups_file.default_groups_file())
+    return restock.backtest(_cached_orders(nc), groups, last=a.last, exclude=a.exclude or ())
 
 
 def _status(nc: NemligClient) -> dict[str, Any]:
@@ -475,6 +537,30 @@ def build_parser() -> argparse.ArgumentParser:
     cmd(osub, "sync", cmd_orders_sync, "cache every finished order's lines locally (~/.cache/nemlig/orders)")
 
     cmd(sub, "favourites", cmd_favourites, "the account's favourite products")
+
+    exclude_help = 'leave out these order categories, e.g. "kød & fisk" (the dinners pick those)'
+    sp = cmd(
+        sub, "restock", cmd_restock, "usual products due for the delivery slot, predicted from past orders"
+    )
+    sp.add_argument(
+        "--slot", type=int, metavar="SLOT_ID", help="predict for this slot (default: the basket's)"
+    )
+    sp.add_argument("--exclude", nargs="+", metavar="CATEGORY", help=exclude_help)
+    sp.add_argument("--no-offers", action="store_true", help="don't check the slot's offers")
+    rsub = sp.add_subparsers(metavar="ACTION")
+    groups = cmd(
+        rsub, "groups", cmd_restock_groups, "products not reviewed yet, by group (from cached orders)"
+    )
+    gsub = groups.add_subparsers(metavar="ACTION")
+    sp = cmd(gsub, "merge", cmd_restock_groups_merge, "count products as one need: group keys or product ids")
+    sp.add_argument("name", help="the group's name; an existing group or key keeps its members")
+    sp.add_argument("members", nargs="+", metavar="KEY_OR_ID")
+    cmd(
+        gsub, "reviewed", cmd_restock_groups_reviewed, "mark every product `restock groups` lists as reviewed"
+    )
+    sp = cmd(rsub, "backtest", cmd_restock_backtest, "score the predictions on the last cached orders")
+    sp.add_argument("--last", type=int, default=30, help="orders to predict (default 30)")
+    sp.add_argument("--exclude", nargs="+", metavar="CATEGORY", help=exclude_help)
 
     sp = cmd(sub, "offers", cmd_offers, "offers for the delivery slot")
     sp.add_argument("--limit", type=int, default=20, help="max products, filtered (default 20, 0 for all)")
@@ -653,6 +739,48 @@ def _text_order(o: OrderSummary) -> str:
     return "\n".join(lines)
 
 
+def _restock_row(i: restock.RestockItem, letter: str = "") -> str:
+    parts = [f"{letter}  {i.product_id}" if letter else i.product_id]
+    parts.append(i.name + (f" ({i.description})" if i.description else ""))
+    parts.append(f"x{i.quantity}  {round(i.p * 100)}%")
+    parts.append((f"every ~{i.every} d, " if i.every else "") + f"last {i.last:%d/%m}")
+    if i.offer:
+        parts.append(f"offer: {i.offer}")
+    return "  " + "  ".join(parts)
+
+
+def _text_restock(r: restock.Restock) -> str:
+    lines = [f"due for {r.slot or r.date} (add):"]
+    lines += [_restock_row(i) for i in r.due] or ["  (none)"]
+    if r.maybe:
+        lines.append("maybe (pick by letter):")
+        lines += [_restock_row(i, chr(ord("a") + n)) for n, i in enumerate(r.maybe)]
+    if r.in_basket:
+        lines.append(f"already in the basket: {r.in_basket} due or maybe")
+    if r.to_review:
+        lines.append(f"to review: {r.to_review} new products (nemlig restock groups)")
+    return "\n".join(lines)
+
+
+def _text_review(r: restock.GroupReview) -> str:
+    lines = [f"named groups: {', '.join(r.named)}"] if r.named else []
+    lines.append(f"to review: {len(r.groups)} groups, {sum(len(g.ids) for g in r.groups)} products")
+    lines += [f"  {g.key}  x{g.bought}  {g.category or '-'}  {' '.join(g.ids)}" for g in r.groups]
+    return "\n".join(lines)
+
+
+def _text_backtest(b: restock.Backtest) -> str:
+    lines = [
+        f"{b.orders} orders, each predicted from the ones before it. {round(b.repeat * 100)}% of their "
+        "groups were bought before, the best recall possible.",
+        f"{'method':<16}{'items':>6}{'precision':>11}{'recall':>8}",
+    ]
+    lines += [f"{s.method:<16}{s.items:>6.1f}{s.precision:>11.2f}{s.recall:>8.2f}" for s in b.scores]
+    lines.append("calibration (predicted: share bought, n):")
+    lines += [f"  {c.predicted}: {c.bought:.2f}  ({c.n})" for c in b.calibration]
+    return "\n".join(lines)
+
+
 def _text_prefs(v: PrefsView) -> str:
     p = v.preferences
     lines = [f"file: {v.file}" + ("" if v.exists else " (not created yet)")]
@@ -707,6 +835,12 @@ def to_text(value: Any) -> str:
         return f"{state}: {slot}" + (f" ({'; '.join(notes)})" if notes else "")
     if isinstance(value, PrefsView):
         return _text_prefs(value)
+    if isinstance(value, restock.Restock):
+        return _text_restock(value)
+    if isinstance(value, restock.GroupReview):
+        return _text_review(value)
+    if isinstance(value, restock.Backtest):
+        return _text_backtest(value)
     if isinstance(value, SyncResult):
         span = f", {value.first} to {value.last}" if value.first else ""
         return (

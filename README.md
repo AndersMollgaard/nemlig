@@ -107,6 +107,7 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
 | `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots. `reserve` accepts the new slot's prices and prints how the basket total changed and what it can't deliver |
 | `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID`, `orders sync` | Order history. `sync` caches every finished order's lines in `~/.cache/nemlig/orders/<account>/` (or `NEMLIG_CACHE_DIR`), fetching only the ones not cached yet |
+| `restock [--slot] [--exclude CAT...] [--no-offers]`, `restock groups`, `restock groups merge NAME KEY_OR_ID...`, `restock groups reviewed`, `restock backtest [--last N]` | The usual products due for the delivery slot, predicted from the cached order history (it syncs first; an order on its way counts as bought). Rows are split into `due`, likely enough to add, and lettered `maybe` rows to pick from, with the chance and the usual gap. Products in the basket and `avoid` matches are left out, and a less likely product on offer for the slot joins the maybes. `groups` lists new products to review, `merge` counts several names or ids as one need (stored in `~/.config/nemlig/groups.json`, or `NEMLIG_GROUPS_FILE`), and `backtest` scores the predictions on the last cached orders |
 | `favourites`, `offers [--limit] [--slot] [--category C...] [--min-discount PCT] [--categories]` | Favourites and offers. `--category` keeps a top or sub category (`koed`, `kylling`; `kød` works too), `--min-discount` keeps offers at least that many percent off, and `--categories` counts the offers per category instead |
 | `lists`, `lists show ID`, `lists create NAME`, `lists set LIST_ID ID:QTY...`, `lists delete ID --yes`, `lists to-basket ID` | Shopping lists |
 | `prefs`, `prefs keep [--id] [--brand] [--name] [--note]`, `prefs avoid ...` | Household preferences, and rules for products never to replace (`keep`) or never to suggest (`avoid`) |
@@ -142,9 +143,11 @@ products, and how to recover from errors. Claude Code picks it up automatically 
 prices for what is in the basket and proposes cheaper swaps.
 [`nemlig-dinners`](.claude/skills/nemlig-dinners/SKILL.md) makes up varied dinners around the
 current offers, agrees on the anchor offers and the dishes with the user, and adds the
-ingredients. [`nemlig-fill-basket`](.claude/skills/nemlig-fill-basket/SKILL.md) chains them
-for a week's basket: it restocks the usual items from the last orders, runs the dinners, then
-proposes cheaper swaps for the whole basket in one report. They all read the household preferences with `nemlig prefs`, and record lasting
+ingredients. [`nemlig-restock`](.claude/skills/nemlig-restock/SKILL.md) adds the usual items
+that are due, predicted from the order history, and lets the user pick from the less certain
+ones. [`nemlig-fill-basket`](.claude/skills/nemlig-fill-basket/SKILL.md) chains them for a
+week's basket: it restocks, runs the dinners, then proposes cheaper swaps for the whole basket
+in one report. They all read the household preferences with `nemlig prefs`, and record lasting
 corrections as `keep` and `avoid` rules.
 
 To shop from any directory, install the command and the skills for your user:
@@ -154,6 +157,7 @@ uv tool install --editable .                       # puts `nemlig` on PATH
 ln -s "$PWD/.claude/skills/nemlig-shopping" ~/.claude/skills/nemlig-shopping
 ln -s "$PWD/.claude/skills/nemlig-cheaper" ~/.claude/skills/nemlig-cheaper
 ln -s "$PWD/.claude/skills/nemlig-dinners" ~/.claude/skills/nemlig-dinners
+ln -s "$PWD/.claude/skills/nemlig-restock" ~/.claude/skills/nemlig-restock
 ln -s "$PWD/.claude/skills/nemlig-fill-basket" ~/.claude/skills/nemlig-fill-basket
 cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
 ```
@@ -176,6 +180,7 @@ afterwards, and a temporary shopping list that is deleted again.
 | `src/nemlig/client.py` | `NemligClient`, the public API |
 | `src/nemlig/cli.py` | The `nemlig` command |
 | `src/nemlig/models/` | Response models, built from the API's dicts |
+| `src/nemlig/order_cache.py`, `restock.py`, `groups.py` | The local order cache, the restock predictions and backtest, and the product groups |
 | `src/nemlig/_http.py`, `auth.py`, `session.py` | Transport and retries, login and JWT, cookie persistence |
 | `tests/` | Offline unit tests; `tests/live/` hits the real site |
 | `docs/nemlig-api.md` | API investigation and endpoint reference. **Start here** for the API |

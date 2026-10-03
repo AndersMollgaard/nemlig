@@ -47,6 +47,15 @@ def unit_label(value: Any) -> str | None:
     return f"{currency}/{_UNITS.get(unit, unit)}" if sep else label
 
 
+def fold(text: str) -> str:
+    """Category names as nemlig's slugs spell them: ``Kød`` and ``fisk og skaldyr`` give
+    ``koed`` and ``fisk-og-skaldyr``, so either spelling matches."""
+    text = text.strip().lower()
+    for letter, ascii_ in (("æ", "ae"), ("ø", "oe"), ("å", "aa"), (" ", "-")):
+        text = text.replace(letter, ascii_)
+    return text
+
+
 def parse_datetime(value: Any) -> datetime | None:
     if not value or str(value).startswith("0001-01-01"):
         return None

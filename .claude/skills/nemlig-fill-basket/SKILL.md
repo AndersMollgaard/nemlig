@@ -1,6 +1,6 @@
 ---
 name: nemlig-fill-basket
-description: Fill the user's nemlig.com basket for the week in one run. Restocks the usual items from past orders, plans dinners around the offers with the user, then proposes cheaper swaps for the whole basket, and reports once. Use when the user asks to fill their basket, do the weekly shop, or make a basket for the week.
+description: Fill the user's nemlig.com basket for the week in one run. Restocks the usual items that are due, plans dinners around the offers with the user, then proposes cheaper swaps for the whole basket, and reports once. Use when the user asks to fill their basket, do the weekly shop, or make a basket for the week.
 allowed-tools: Bash(nemlig:*), Bash(uv run nemlig:*)
 ---
 
@@ -18,7 +18,7 @@ builds on the current basket and never clears it.
 
 1. **Context, in one Bash call:**
    ```sh
-   nemlig --text prefs; nemlig --text basket; nemlig --text orders --limit 4
+   nemlig --text prefs; nemlig --text basket
    ```
 2. **Slot and nights: one question, then reserve.**
    - Slot: the one the user named, or the basket's `(reserved)` slot. `(not reserved)` is only
@@ -39,31 +39,27 @@ builds on the current basket and never clears it.
    notes for the report: a price change (`basket -91.21 kr`) and `undeliverable:` lines, which
    the new slot won't bring. From here on every command uses the reserved slot, with no
    `--slot`.
-3. **Restock the usual** (until `nemlig-restock` exists). In one Bash call, `orders show` the
-   last 3 orders from step 1 whose delivery has passed:
-   ```sh
-   nemlig --text orders show 88876788; nemlig --text orders show 88512230; nemlig --text orders show 88104511
-   ```
-   An order whose delivery is still ahead is on its way: skip its products and don't count it.
-   Add the products bought in at least 2 of the 3, at the quantity from the latest of them.
-   Skip:
-   - products already in the basket, and lines marked `SOLD OUT`,
-   - products an `avoid` rule matches or that break `diet`,
-   - fresh meat and fish: choosing those is the dinners' job.
-
-   Add them in **one** `nemlig --text basket add ID:QTY ...`. If nothing qualifies, say so in
-   the report and go on.
+3. **Restock the usual.** Load `nemlig-restock` and follow its *Chained* section, with
+   `--exclude "kød & fisk"` (fresh meat and fish are the dinners' job). It reviews new
+   products if needed, adds the due items in one `basket add`, and hands back the maybes by
+   letter. If nothing is due, say so in the report and go on.
 4. **Dinners, with their checkpoints.** Load `nemlig-dinners` and follow its *Chained* section,
-   with the slot (reserved), the nights and the people. Show what step 3 added in one line
-   above its first checkpoint ("Restocked 14 usual items, 312.40 kr: minimælk, rugbrød, …"), so
-   the user sees it before the first question. The user picks the anchors and dishes as in
+   with the slot (reserved), the nights and the people. Above its first checkpoint, show what
+   step 3 added in one line, then the maybes by letter, so the user answers both in one reply:
+   ```
+   Restocked 6 usual items (187.40 kr): letmælk, solsikkerugbrød, bananer, ...
+   Maybe due, pick by letter with the anchors: a. Toiletpapir 8 rl. (last 21/09)  b. Grovhakket leverpostej, 3 for 50 kr (-25%)  c. Falke hvedemel 2 kg
+   ```
+   The user picks the anchors by number and the maybes by letter ("★ and a, c"). Add the
+   picked letters in **one** `basket add` before dinners' step 5, so they count as at home
+   when the dishes are priced. No letters means none. Then the user picks the dishes as in
    that skill. It adds the dishes and hands back a block instead of reporting.
 5. **Cheaper over the whole basket.** Load `nemlig-cheaper` and follow its *Chained* section.
    It reads the basket fresh, so the restocked and dinner lines are reviewed with the rest,
    and hands back proposals without applying any.
 6. **One report, one question.** Build it from the handoff blocks and the last basket output:
    ```
-   Restocked from your last 3 orders (14 lines, 312.40 kr): 2 x Minimælk øko 1 l, Rugbrød, Æg 10 stk., ...
+   Restocked (8 lines, 231.30 kr): 3 x Letmælk 1,5%, Solsikkerugbrød, 10 x Banan, Toiletpapir, ...
    Dinners:
    - Fri: Ovnstegt kylling med citron og kartofler, 131 kr
    - Sat: Culotte med bagte rodfrugter, 325 kr (Sun: steaksandwich from the leftovers)
@@ -79,6 +75,8 @@ builds on the current basket and never clears it.
      `budget` is set. Put every `Questions:` line from the handoffs under `Check:`.
    - Leave out a section that is empty, and the question about swaps when there are none.
 
+   The restocked line counts the due items and the picked maybes together.
+
    Apply the answer in **one** `basket set`: accepted swaps as `OLD_ID:0 NEW_ID:QTY`, and
    dropped restock lines as `ID:0`. It is absolute, so it is safe to repeat after an error.
    Record a "never" as `nemlig-cheaper` does alone, and say so. Finish with the new basket
@@ -87,7 +85,8 @@ builds on the current basket and never clears it.
 ## Rules
 
 - The run asks the user at three points only: the slot and nights (when missing), the dinners'
-  two checkpoints, and the closing question. Everything else is decided and reported.
+  two checkpoints (the restock maybes ride along with the first), and the closing question.
+  Everything else is decided and reported.
 - Each sub-skill gets the slot and its instructions from this skill and hands back one block.
   Only this skill reports to the user.
 - Never `basket add` twice for the same items. If an add fails, follow the base skill's

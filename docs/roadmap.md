@@ -167,7 +167,7 @@ review them. Skill only: no CLI change is planned.
   (choosing it counts as asking; check for `reserved:`, stop on `not reserved`, carry the
   undeliverable and price notes to the report). Every later step then uses the reserved
   slot, with no `--slot` needed.
-- [x] **Restock stopgap** (until Phase 4). The base skill's "the usual", made concrete:
+- [x] **Restock stopgap** (replaced by `nemlig-restock` in Phase 4). The base skill's "the usual", made concrete:
   `orders show` the last 3 delivered orders in one Bash call (an order still on its way is
   skipped, and so are its products). Add the products bought in at least 2 of
   them, at last time's quantity, in one `basket add`. Skip lines already in the basket,
@@ -217,24 +217,77 @@ its own. Confirmed by the user on a live run (2026-10-01).
 
 ## Phase 4: `nemlig-restock` (predictive)
 
-- [ ] **Data.** Use the Phase 0 cache. Order lines have no category
-  (`src/nemlig/models/orders.py`), so look each product up once, via search or product details,
-  and cache its category.
-- [ ] **Grouping.** Products that are basically the same count as one group ("minimælk 1 l" in any
-  brand, øko or not). Claude builds the product → group mapping and it is stored in
-  `~/.config/nemlig/groups.json`. Later runs only review new products.
-- [ ] **Model.** A hierarchical Bayesian model of the time between purchases per group. It takes
-  quantity into account: 2 units last time last longer than 1. Groups with few purchases shrink
-  toward their category's prior. Output: the probability that a group runs out before the chosen
-  delivery slot. Leave out groups with too few purchases or a wide posterior, rather than using a
-  hard count cutoff. Decide the dependencies (pure-Python conjugate model or numpy/scipy/PyMC)
-  when this phase starts.
-- [ ] **Backtest.** Hold out the last k orders and predict each one from the orders before it.
-  Measure precision and recall, and tune the thresholds on that.
-- [ ] **CLI.** `nemlig restock [--slot ID]` prints lean lines: group, suggested product id,
-  P(due), last bought. It skips what is already in the basket.
-- [ ] **Skill.** Write `nemlig-restock` and plug it into the orchestrator in place of the Phase 3
-  stopgap.
+Replanned at the start (2026-10-01, with the user): the goal is to propose relevant items, and
+the method follows the data. An exploratory backtest on the 135 cached orders showed:
+
+- About 81% of an order's groups were bought before, which caps recall.
+- Timing helps for weekly items. For slow movers it hardly helps, because their gaps vary
+  widely (toilet paper: 3–38 days).
+- Quantity barely matters.
+
+So the model is simple and calibrated rather than a tight interval model. Decided with the
+user: the sure items are added without asking, and the "maybe" items come as a lettered pick
+list with the dinners' first checkpoint. Groups are automatic by name, and Claude merges new
+products only. Offer stock-up and upcoming orders are in. Seasonality and recording "stopped
+buying" are out.
+
+- [x] **Data.** Order lines already carry a category, so no per-product lookup is needed.
+  - `OrderLine.category` comes from `MainGroupName`. It was set on all 136 orders back to
+    2023, in 12 values, and `Kød & fisk` is exactly fresh meat and fish.
+  - `OriginalProductNumber` (substitutions) was never set, so it isn't mapped. Findings are in
+    `docs/nemlig-api.md`.
+  - The cache has a `format` file. `sync` refetches every order when it is older (2.9 s
+    live), and exposes the ids of orders on their way (`SyncResult.upcoming_ids`, not printed).
+- [x] **Grouping.** A product's group is its latest name, lowercased, without the øko mark.
+  - Latest, because nemlig renamed 25 of 1104 ids ("Letmælk" → "Letmælk 1,5%").
+  - nemlig names are generic with the brand in the description, so names already merge most
+    brands: the last year's 584 ids made 523 groups.
+  - `~/.config/nemlig/groups.json` (`NEMLIG_GROUPS_FILE`) records named groups, whose members
+    are auto keys or product ids (an id wins over its name), and the reviewed ids.
+    `restock groups` lists unreviewed products from the last year in groups bought twice or
+    more. `merge` and `reviewed` maintain the file.
+  - The first review (390 products, 14 KB of text) merged 23 clear same-need groups, e.g. æg =
+    frilandsæg + skrabeæg, and agurk = agurk + agurk dansk.
+- [x] **Model.** Pure Python, no new dependencies (`src/nemlig/restock.py`).
+  - Per group: the purchase rate per order, decayed with an 8-order half-life, and the days
+    since the last purchase ÷ the median of the last 6 gaps.
+  - P(bought in this order) is this household's share in that (rate bin, ratio bin) cell,
+    smoothed toward the rate bin and that toward the overall share. That is the hierarchical
+    shrinkage, done as empirical Bayes. Upcoming orders count as bought on their delivery date.
+  - Tiers: due at P ≥ 0.55. Maybe at P ≥ 0.3, the likeliest 12. Plus up to 3 groups at
+    P ≥ 0.1 with a product on offer at 20% or more for the slot.
+  - The suggested product is the group's latest one that no `avoid` rule matches. Brand rules
+    use the description's last part. The quantity is the median of the last 3 purchases.
+  - Tried and dropped, because none moved precision or recall by more than 0.02: category as a
+    pooling level, gaps adjusted for quantity, purchase count as a level, and other half-lives,
+    gap windows, smoothing and bin edges. The model is flat in all of them.
+- [x] **Backtest.** `nemlig restock backtest [--last N]` predicts each order from the ones before it,
+  as the model learns its table in one pass. On the last 40 orders, without `Kød & fisk`, after
+  the first review:
+
+  | Method | Items | Precision | Recall |
+  | --- | --- | --- | --- |
+  | due | 8.1 | 0.70 | 0.15 |
+  | due + maybe | 18.4 | 0.54 | 0.27 |
+  | decayed rate alone, same size | 18.4 | 0.55 | 0.27 |
+  | stopgap (2 of last 3) | 19.4 | 0.44 | 0.23 |
+
+  Calibration: predicted 0.3–0.4 was bought 37% of the time, 0.5–0.6 50%, 0.7–0.8 73% and
+  0.8–0.9 77%. The rate alone ranks as well as the model. Due-ness adds the calibrated
+  probabilities, which the tiers need, and holds back items that were just bought. Offer
+  stock-up and upcoming orders can't be backtested, since there are no past offers or orders
+  on their way.
+- [x] **CLI.** `nemlig restock [--slot ID] [--exclude CAT...] [--no-offers]` takes 1.8 s live,
+  syncs first, and prints due rows and lettered maybe rows: id, product, quantity, chance, usual
+  gap, last bought, offer.
+- [x] **Skill.** `nemlig-restock` covers the review, the judgment (diet, `always`), adding the
+  due rows and the pick list. It replaces the stopgap as `nemlig-fill-basket` step 3, run with
+  `--exclude "kød & fisk"`, and its maybes ride along with dinners' checkpoint 1. The base
+  skill sends "the usual" and "restock" to it.
+- [ ] **Live run.** One "fill my basket for the week" with the new step 3, and `nemlig-restock`
+  alone.
+
+Done when the user accepts most of the due rows and finds the maybe list relevant.
 
 ## Phase 5: `nemlig-recipes` (recipe artifacts)
 

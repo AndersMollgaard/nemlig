@@ -47,6 +47,8 @@ class OrderLine(Model):
     amount: float | None
     discount: float | None = None
     sold_out: bool = False
+    category: str | None = None
+    """The site's main group, e.g. ``"Køl"``, ``"Kolonial"`` or ``"Kød & fisk"``."""
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> OrderLine:
@@ -59,6 +61,7 @@ class OrderLine(Model):
             amount=money(d.get("Amount")),
             discount=money(d.get("DiscountAmount")) or None,
             sold_out=bool(d.get("SoldOut")),
+            category=d.get("MainGroupName") or None,
         )
 
 

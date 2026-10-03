@@ -50,7 +50,8 @@ def test_reads(nc):
     assert nc.get_delivery_days(days=2)
     orders = nc.get_orders(limit=2)
     if orders:
-        assert nc.get_order(orders[0].id).lines
+        lines = nc.get_order(orders[0].id).lines
+        assert lines and all(line.category for line in lines)  # restock relies on it
     assert isinstance(nc.get_favourites(), list)
     assert nc.get_offers(limit=5)
 

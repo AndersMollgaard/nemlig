@@ -184,6 +184,7 @@ def test_orders():
     assert order.id == 10000001
     assert [line.product_id for line in order.lines] == ["5027015", "5012294"]
     assert order.lines[1].discount == 3.0
+    assert [line.category for line in order.lines] == ["Drikke", "Grønt"]
     assert order.delivery_price == 19.0
 
 

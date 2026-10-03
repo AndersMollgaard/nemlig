@@ -86,8 +86,9 @@ note = "too thin"
 4. Run one `basket add` with every pick.
 5. Report back (see *Reporting*). Ask any open questions together, in that one message.
 
-For "the usual", "same as last time" or "refill", take the products from order history rather
-than searching:
+For "the usual", "restock" or "what are we running low on", load `nemlig-restock`. It predicts
+what is due from the whole order history. For "same as last time", take the products from
+order history rather than searching:
 ```sh
 nemlig --text orders --limit 3                 # recent orders: id, date, total
 nemlig --text orders show 88876788             # lines as "QTY x NAME [PRODUCT_ID] PRICE"
@@ -155,8 +156,9 @@ last `basket` command printed.
 
 ## Sub-skills
 
-`nemlig-cheaper` (cheaper swaps) and `nemlig-dinners` (dinners from the offers) do one job each
-on top of this skill. `nemlig-fill-basket` chains them for a week's basket. Every sub-skill
+`nemlig-cheaper` (cheaper swaps), `nemlig-dinners` (dinners from the offers) and
+`nemlig-restock` (the usual items that are due) do one job each on top of this skill.
+`nemlig-fill-basket` chains them for a week's basket. Every sub-skill
 starts with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the rules here.
 
 - **Alone** (the user asked for it): it reports to the user as in *Reporting* and applies what
@@ -182,7 +184,8 @@ nemlig --text offers --category koed kylling --min-discount 20 --limit 0
 nemlig --text offers --categories                   # offer counts per category and sub-category
 nemlig --text search Q1 Q2 --cheaper-than ID1 ID2   # only what costs less per kg/l/stk than those basket lines
 nemlig --text prefs                                 # preferences, keep and avoid rules
-nemlig --text orders sync                           # cache all finished orders locally (for restock)
+nemlig --text restock --exclude "kød & fisk"        # usual items due for the basket's slot (see nemlig-restock)
+nemlig --text orders sync                           # cache all finished orders locally (restock does it too)
 nemlig --text offers --slot SLOT_ID                 # another slot's offers, without reserving it
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)

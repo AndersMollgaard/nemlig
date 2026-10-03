@@ -148,7 +148,7 @@ Example responses: see [`fixtures/`](fixtures/).
 | Remove a quantity-0 line | Same endpoint, `{ProductId, quantity: 0, AffectPartialQuantity: true}` | Cookie | Needed for sold-out lines left at quantity 0 (see gotchas) | Tested |
 | Clear basket | `POST www/webapi/basket/ClearBasket` | Cookie | Empties the lines. **The reserved slot stays reserved** | Tested |
 | Order history | `GET www/webapi/order/GetBasicOrderHistory?skip&take` | Cookie | Numeric `Id` and `OrderNumber` per order, and `NumberOfPages`. `skip` is an offset rounded down to a page (see findings). Every order showed `Status: 3` | Tested |
-| Order lines | `GET www/webapi/v2/order/GetOrderHistory/{Id}` | Cookie | `Lines[].ProductNumber` works as a basket product id | Tested |
+| Order lines | `GET www/webapi/v2/order/GetOrderHistory/{Id}` | Cookie | `Lines[].ProductNumber` works as a basket product id; `MainGroupName` is the line's category | Tested |
 | Latest order | `GET www/webapi/order/GetLatestOrderHistory` | Cookie | `includeCanceled` | Repos |
 | Reorder in one call | `POST www/webapi/order/CopyOrder` | Cookie | `{OrderNumber: "<numeric Id>"}`. **The field takes the numeric `Id`**; the real order number gives `400 Order not found`. It merges the whole order into the basket additively (18/18 lines) and keeps the reserved slot | Tested |
 | Shopping lists | `POST www/webapi/ShoppingList/CreateShoppingList?name=`, `UpdateProductInShoppingList?listId&productId&amount`, `GET getShoppingList?listId`, `GetShoppingLists?skip&take`, `POST RemoveShoppingList?listId` | Cookie | `amount` is absolute. All parameters go in the query string, with no body | Tested |
@@ -311,6 +311,15 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
   back after both. Tested 2026-09-29: `TryUpdateDeliveryTime` reserved the slot, and
   `ClearBasket` on an empty basket left the reservation in place (other clients say it drops it).
   There is no known call that releases a reservation.
+- **Order lines carry a category, but no substitutions** (scanned all 136 orders, 2026-10-01).
+  Every product line has `MainGroupName`, back to the first order in 2023, and `GroupName`
+  always equals it. There are 12 values: Kolonial, Køl, Grønt, Drikke, Husholdning, Frost,
+  Kiosk, Pleje, Kød & fisk, Vin, Inspiration and Blomster & tilbehør. `Kød & fisk` is fresh
+  meat and fish only (kyllingebryst, hakket oksekød, laks). Sliced meats and fiskefrikadeller
+  are under `Køl`, frozen meat under `Frost`. `OriginalProductNumber`, `OriginalProductName`,
+  `OriginalQuantity` and `OriginalItemPrice` were empty or 0 on every line, so substitutions
+  can't be read from history. A product id keeps its id when nemlig renames it: 25 of 1104 ids
+  appeared under two names, such as "Letmælk" and later "Letmælk 1,5%".
 - **`TryUpdateDeliveryTime` is a preview when prices change** (tested 2026-09-30). With a basket
   whose prices differ in the new slot, it answered `IsReserved: false`, `MinutesReserved: 0`, no
   message, and `ProductLineDiffs[]` of `{ProductName, Undeliverable, AmountDiff}`. The site shows
