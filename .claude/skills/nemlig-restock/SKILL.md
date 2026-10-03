@@ -87,13 +87,18 @@ it. The prediction fades as orders without it come in.
 
 ## Chained: hand back
 
-The orchestrator says which categories to leave out (`--exclude "kød & fisk"`). Review new
-products as in step 2. Don't ask. Add the due rows in one `basket add` and hand back the base
-skill's block:
+The orchestrator gives the slot and the categories to leave out, and has read `prefs` already:
+```sh
+nemlig --text restock --exclude "kød & fisk" --slot SLOT_ID
+```
+Review new products as in step 2. Don't ask. Judge the list as in step 3, add the due rows in
+one `basket add`, and hand back the base skill's block. Name any merges under `Applied:`, since
+they change later predictions:
 
 ```
 Applied:
 - added 6 due lines, 187.40 kr: 5019859:3 Letmælk 1,5%, 5012678:1 Solsikkerugbrød, ...
+- merged groups: æg = frilandsæg + skrabeæg
 Proposed:
 - a. [5012806] Toiletpapir 8 rl. x2 (44%, last 21/09)
 - b. [5602663] Grovhakket leverpostej x1 (18%, offer: 3 for 50 kr, -25%)

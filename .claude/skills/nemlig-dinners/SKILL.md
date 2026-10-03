@@ -34,9 +34,10 @@ added before both.
      together with the number of nights or people if those are also missing, and fetch no
      offers until it is answered. Then look up the slot as above.
 
-   From then on pass `--slot SLOT_ID` to `offers` and `search` unless the slot is the reserved
-   one. The slot the user chose here is reserved in step 8, before anything is added. Choosing
-   it counts as asking for the reservation, so the base skill's "only when asked" rule is met.
+   From then on pass `--slot SLOT_ID` to `offers` and `search`, also when it is the reserved
+   one (that costs nothing, and keeps the prices right if the hold lapses). The slot the user
+   chose here is reserved in step 8, before anything is added. Choosing it counts as asking for
+   the reservation, so the base skill's "only when asked" rule is met.
 3. **Dinner offers, in one call:**
    ```sh
    nemlig --text offers --category koed fisk-og-skaldyr groentsager faerdigretter-og-koederstatning --min-discount 20 --limit 0 --slot SLOT_ID
@@ -94,6 +95,8 @@ added before both.
    - Assumed at home: salt, pepper, oil, butter, flour, sugar, dried spices, stock cubes.
    - Also assumed at home: whatever is in the basket, and things that keep that were in the
      latest order (rice, pasta, onions, garlic).
+   - Chained, a restock maybe the user didn't pick may be running low. If a dish needs it, keep
+     it at home but name it first in the "Assumed at home" line, so the user can say.
    - Everything else is to buy.
 
    Run **one** search over the to-buy items of every option, with no duplicates:
@@ -131,26 +134,14 @@ added before both.
    first"). If the picks don't add up to N nights, or exceed what a table covers, say so
    before adding.
 8. **Reserve the slot, then add.**
-   1. If the chosen slot isn't the basket's reserved slot, reserve it on its own first:
-      ```sh
-      nemlig --text delivery reserve SLOT_ID
-      ```
-      It exits 0 even when the reservation fails, so read the output. It must start with
-      `reserved:` and name the chosen slot. On `not reserved: …`, stop without adding
-      anything. Tell the user, show the nearest bookable slots
-      (`nemlig --text delivery --available --days 3 --start DAY`), and ask. A different slot
-      can have different offers, so check the anchors against it with
-      `offers --slot NEW_ID` before adding.
+   1. If the chosen slot isn't the basket's reserved slot, reserve it first, as in the base
+      skill's *Reserving a delivery slot*. If it fails, add nothing. When the user then picks
+      another slot, its offers can differ, so check the anchors with `offers --slot NEW_ID`
+      before adding.
 
-      A successful reservation can end in notes: `reserved: fre. 02/10 kl. 17-18 (basket
-      -91.21 kr; undeliverable: Peberfrugt rød)`. These are about lines already in the basket,
-      now at the new slot's prices.
-      - **Undeliverable:** the new slot won't bring these lines. If a dish relied on one (step 6
-        counted basket lines as at home), add a replacement from the step-6 search to this
-        `basket add`, or search once for just those items. Either way, list the undeliverable
-        lines in the report so the user can decide about the rest.
-      - **Price change:** mention it in the report ("moving to Friday made the basket 91.21 kr
-        cheaper").
+      If a dish relied on an undeliverable line (step 6 counted basket lines as at home), add
+      a replacement from the step-6 search to this `basket add`, or search once for just those
+      items.
    2. Run one `basket add` for the chosen dishes, with the ids and quantities from step 6.
       Don't search again. Report as in the base skill, with one line per night (dish, cost).
       Take the basket total, the minimum-order line and the slot from that output. The slot
@@ -166,9 +157,11 @@ brand"), record it as the base skill says: food rules in `diet`, products with `
 
 ## Chained: hand back
 
-Run the flow with both checkpoints, as alone. The orchestrator settles and reserves the slot
-and gives the nights and people, so skip step 2's question and step 8's reservation. In step
-8, run the one `basket add` and don't report. Hand back the base skill's block: one
+Run the flow with both checkpoints, as alone. The orchestrator has read `prefs` and the
+basket, settled and reserved the slot, and gives its id, the nights and the people. So in
+*Context* run only `nemlig --text orders --limit 1` (then `orders show`), skip the *Delivery
+slot* question, and in *Reserve the slot, then add* skip the reservation: run the one
+`basket add` and don't report. Hand back the base skill's block: one
 `Applied:` line per night with the dish, its cost and the product ids added
 (`Fri: Ovnstegt kylling med citron, 131 kr: 5066317:1 2301103:2`). Under `Questions:`, list
 the assumed-at-home items worth checking.

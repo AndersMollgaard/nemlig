@@ -103,9 +103,9 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 
 | Command | What |
 | --- | --- |
-| `search QUERY... [--limit] [--offset] [--slot] [--cheaper-than ID...]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list. `--cheaper-than` takes one basket product id per query and keeps only what costs less per kg, l or piece (not per pack), offers included, and applies the `keep` and `avoid` rules in the preferences |
+| `search QUERY... [--limit] [--offset] [--slot] [--cheaper-than ID...]`, `suggest QUERY`, `product ID_OR_SLUG` | Find products. Several queries run in parallel and print a list. `--cheaper-than` takes one basket product id per query and keeps only what costs less per kg, l or piece (not per pack), offers included, and applies the `keep` and `avoid` rules in the preferences. `--slot` prices for another slot; the basket's own slot costs no extra request |
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket |
-| `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots. `reserve` accepts the new slot's prices and prints how the basket total changed and what it can't deliver |
+| `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID` | Timeslots. `reserve` accepts the new slot's prices and prints how the basket total changed and what it can't deliver; it exits 1 when the slot isn't reserved |
 | `orders [--limit] [--page]`, `orders show ID`, `orders reorder ID`, `orders sync` | Order history. `sync` caches every finished order's lines in `~/.cache/nemlig/orders/<account>/` (or `NEMLIG_CACHE_DIR`), fetching only the ones not cached yet |
 | `restock [--slot] [--exclude CAT...] [--no-offers]`, `restock groups`, `restock groups merge NAME KEY_OR_ID...`, `restock groups reviewed`, `restock backtest [--last N]` | The usual products due for the delivery slot, predicted from the cached order history (it syncs first; an order on its way counts as bought). Rows are split into `due`, likely enough to add, and lettered `maybe` rows to pick from, with the chance and the usual gap. Products in the basket and `avoid` matches are left out, and a less likely product on offer for the slot joins the maybes. `groups` lists new products to review, `merge` counts several names or ids as one need (stored in `~/.config/nemlig/groups.json`, or `NEMLIG_GROUPS_FILE`), and `backtest` scores the predictions on the last cached orders |
 | `favourites`, `offers [--limit] [--slot] [--category C...] [--min-discount PCT] [--categories]` | Favourites and offers. `--category` keeps a top or sub category (`koed`, `kylling`; `kød` works too), `--min-discount` keeps offers at least that many percent off, and `--categories` counts the offers per category instead |
@@ -118,20 +118,23 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
   labels and offer, as search results do; `--text` leaves them out. A search product on offer
   also has `offer_unit_price`, the unit price when buying the offer's quantity. Offers and
   favourites have `discount`, the percent off, from the price before the offer or a
-  multi-buy deal.
+  multi-buy deal. In `search` and `offers`, a product an `avoid` rule matches has
+  `avoided: true` (`AVOID` in `--text`).
 - **Several items per call.** `basket add/set/remove` and `lists set` apply their items in order.
   If one fails, the error lists the items that were already `applied`, so an agent can recover
   without adding twice.
 - **Errors** go to stderr as `{"error": "<class>", "message": ...}`. Exit codes: 0 ok, 1
-  nemlig.com or network error, 2 bad usage, 3 not logged in or login rejected.
+  nemlig.com or network error (also `delivery reserve` when the slot isn't reserved), 2 bad
+  usage, 3 not logged in or login rejected.
 - **Credentials** come from `NEMLIG_USER` / `NEMLIG_PASS` in the environment, `--env-file`
-  (or `NEMLIG_ENV_FILE`), `./.env`, or `~/.config/nemlig/.env`, in that order. The session is
-  saved as with the library; `--no-session` turns that off.
-- **Preferences** live in `preferences.toml` next to that `.env` (so the repo root in a
-  checkout, where it is gitignored), or in `NEMLIG_PREFS_FILE`. It holds free text for the
-  agent (household, diet, always, budget) and `[[keep]]` and `[[avoid]]` rules. A rule matches
-  when every field it sets matches: `id`, `brand` (ignoring case) and part of the `name`. Start
-  from `cp preferences.example.toml preferences.toml`.
+  (or `NEMLIG_ENV_FILE`), `./.env` if it sets `NEMLIG_USER` (so another project's `.env`
+  doesn't get in the way), or `~/.config/nemlig/.env`, in that order. The session is saved as
+  with the library; `--no-session` turns that off.
+- **Preferences** live in `~/.config/nemlig/preferences.toml` (or `NEMLIG_PREFS_FILE`), the
+  same file from every working directory. It holds free text for the agent (household, diet,
+  always, budget) and `[[keep]]` and `[[avoid]]` rules. A rule matches when every field it sets
+  matches: `id`, `brand` (ignoring case) and part of the `name`. Start from
+  `cp preferences.example.toml ~/.config/nemlig/preferences.toml`.
 
 ## Agents
 
@@ -160,6 +163,7 @@ ln -s "$PWD/.claude/skills/nemlig-dinners" ~/.claude/skills/nemlig-dinners
 ln -s "$PWD/.claude/skills/nemlig-restock" ~/.claude/skills/nemlig-restock
 ln -s "$PWD/.claude/skills/nemlig-fill-basket" ~/.claude/skills/nemlig-fill-basket
 cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
+cp preferences.example.toml ~/.config/nemlig/preferences.toml   # then fill it in
 ```
 
 ## Tests

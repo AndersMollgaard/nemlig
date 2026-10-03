@@ -20,6 +20,7 @@ NEMLIG_LIVE=1 uv run pytest -m live       # real site with the .env account; onl
 - CLI output costs tokens on every agent call. Keep it lean, and prefer dropping a field to
   adding one.
 - When CLI behaviour changes, update `README.md` and `.claude/skills/nemlig-shopping/SKILL.md`.
+  `tests/test_skills.py` parses every `nemlig` command the skills and README quote.
 - `.env` holds real credentials. Never print it or commit it.
-- `preferences.toml` (gitignored, next to `.env`) is the household's. Never commit it; use a
-  scratch copy via `NEMLIG_PREFS_FILE` when testing.
+- `~/.config/nemlig/preferences.toml` is the household's. Never commit a copy; use a scratch
+  copy via `NEMLIG_PREFS_FILE` when testing.

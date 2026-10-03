@@ -20,6 +20,7 @@ from pydantic import BaseModel, ValidationError
 
 from . import groups as groups_file
 from . import preferences, restock
+from ._env import read_env_file
 from ._version import __version__
 from .client import SLOT_LOOKUP_DAYS, NemligClient
 from .errors import ApiError, AuthError, NemligError, NotLoggedInError
@@ -70,10 +71,12 @@ notes:
   site's default when anonymous); search and offers take --slot SLOT_ID to see another one.
   Output is JSON on stdout; --text gives a compact human view. Fields that are null or empty
   are left out.
-  Credentials: NEMLIG_USER and NEMLIG_PASS in the environment, in --env-file, in ./.env, or in
-  ~/.config/nemlig/.env. The session is saved, so later runs skip the login.
-  Preferences: preferences.toml next to that .env (or NEMLIG_PREFS_FILE). `prefs keep` and
-  `prefs avoid` add rules that search --cheaper-than applies.
+  Credentials: NEMLIG_USER and NEMLIG_PASS in the environment, in --env-file, in ./.env (if it
+  sets NEMLIG_USER), or in ~/.config/nemlig/.env. The session is saved, so later runs skip the
+  login.
+  Preferences: ~/.config/nemlig/preferences.toml (or NEMLIG_PREFS_FILE). `prefs keep` and
+  `prefs avoid` add rules: search --cheaper-than and restock leave out avoided products, and
+  search and offers mark them AVOID.
 
 exit codes:
   0 ok, 1 nemlig.com or network error, 2 bad usage, 3 not logged in or login rejected.
@@ -86,6 +89,10 @@ SLOT_HELP = "price for this delivery slot (from `delivery`) without reserving it
 
 class UsageError(Exception):
     """Bad arguments that argparse cannot catch by itself."""
+
+
+class NotReservedError(Exception):
+    """`delivery reserve` ended without the asked-for slot reserved."""
 
 
 class PartialError(Exception):
@@ -188,7 +195,7 @@ def _cheaper(result: SearchResult, line: BasketLine, prefs: Preferences) -> Sear
 
 def _search_cheaper(nc: NemligClient, a: argparse.Namespace) -> list[SearchResult]:
     """Search only for the lines no keep rule protects, and filter what comes back."""
-    prefs = preferences.load(_prefs_file(a))
+    prefs = preferences.load(preferences.default_prefs_file())
     lines = _basket_lines(nc, a.cheaper_than, a.queries)
     kept = [prefs.kept_by(line.product_id, line.name, line.brand) for line in lines]
     todo = [q for q, rule in zip(a.queries, kept, strict=True) if rule is None]
@@ -201,11 +208,22 @@ def _search_cheaper(nc: NemligClient, a: argparse.Namespace) -> list[SearchResul
     ]
 
 
+def _mark_avoided(products: Sequence[Product], prefs: Preferences) -> list[Product]:
+    return [
+        p.model_copy(update={"avoided": True}) if prefs.avoided(p.id, p.name, p.brand) else p
+        for p in products
+    ]
+
+
 def cmd_search(nc: NemligClient, a: argparse.Namespace) -> Any:
     if a.cheaper_than:
         results = _search_cheaper(nc, a)
     else:
-        results = nc.search_many(a.queries, limit=a.limit, offset=a.offset, slot_id=a.slot)
+        prefs = preferences.load(preferences.default_prefs_file())
+        results = [
+            r.model_copy(update={"products": _mark_avoided(r.products, prefs)})
+            for r in nc.search_many(a.queries, limit=a.limit, offset=a.offset, slot_id=a.slot)
+        ]
     return results[0] if len(results) == 1 else results
 
 
@@ -251,7 +269,15 @@ def cmd_delivery(nc: NemligClient, a: argparse.Namespace) -> Any:
 
 
 def cmd_delivery_reserve(nc: NemligClient, a: argparse.Namespace) -> Any:
-    return nc.reserve_slot(a.slot_id)
+    result = nc.reserve_slot(a.slot_id)
+    slot = result.slot
+    if not result.reserved or slot is None or slot.id != a.slot_id:
+        message = f"slot {a.slot_id} not reserved: {result.message or 'no reason given'}"
+        if slot:
+            state = "reserved" if slot.reserved and not slot.reservation_lost else "not reserved"
+            message += f"; the basket's slot is {slot.label or slot.id} ({state})"
+        raise NotReservedError(message)
+    return result
 
 
 def cmd_orders(nc: NemligClient, a: argparse.Namespace) -> Any:
@@ -308,7 +334,8 @@ def cmd_offers(nc: NemligClient, a: argparse.Namespace) -> Any:
         offers = [p for p in offers if p.discount is not None and p.discount >= a.min_discount]
     if a.categories:
         return _category_counts(offers)
-    return offers[: a.limit] if a.limit else offers
+    offers = offers[: a.limit] if a.limit else offers
+    return _mark_avoided(offers, preferences.load(preferences.default_prefs_file()))
 
 
 def cmd_lists(nc: NemligClient, a: argparse.Namespace) -> Any:
@@ -352,7 +379,7 @@ class PrefsView(BaseModel):
 
 
 def _prefs_view(a: argparse.Namespace) -> PrefsView:
-    path = _prefs_file(a)
+    path = preferences.default_prefs_file()
     return PrefsView(file=str(path.resolve()), exists=path.is_file(), preferences=preferences.load(path))
 
 
@@ -362,7 +389,7 @@ def cmd_prefs(nc: NemligClient, a: argparse.Namespace) -> Any:
 
 def cmd_prefs_add(nc: NemligClient, a: argparse.Namespace) -> Any:
     rule = Rule(id=a.id, brand=a.brand, name=a.name, note=a.note)
-    preferences.add_rule(_prefs_file(a), a.kind, rule)
+    preferences.add_rule(preferences.default_prefs_file(), a.kind, rule)
     return _prefs_view(a)
 
 
@@ -371,9 +398,9 @@ def _cached_orders(nc: NemligClient) -> list[Order]:
 
 
 def _restock_date(nc: NemligClient, basket: Basket, slot_id: int | None) -> tuple[date, str]:
-    """The delivery date to predict for, and the slot as text."""
-    if slot_id is None:
-        slot = basket.delivery_slot
+    """The delivery date to predict for, and the slot as text. The basket's own slot needs no lookup."""
+    slot = basket.delivery_slot
+    if slot_id is None or (slot is not None and slot.id == slot_id):
         if slot is None or slot.start is None:
             raise UsageError("the basket has no delivery slot; pass --slot SLOT_ID")
         label = slot.label or f"{slot.start:%d/%m %H}-{slot.end_hour:02d}"
@@ -400,7 +427,7 @@ def cmd_restock(nc: NemligClient, a: argparse.Namespace) -> Any:
         when=when,
         slot=slot,
         basket=basket.lines,
-        prefs=preferences.load(_prefs_file(a)),
+        prefs=preferences.load(preferences.default_prefs_file()),
         offers=offers,
         exclude=a.exclude or (),
     )
@@ -523,7 +550,12 @@ def build_parser() -> argparse.ArgumentParser:
     delivery.add_argument("--start", type=iso_date, help="first day, YYYY-MM-DD (default today)")
     delivery.add_argument("--available", action="store_true", help="only slots that can be booked")
     dsub = delivery.add_subparsers(metavar="ACTION")
-    sp = cmd(dsub, "reserve", cmd_delivery_reserve, "reserve a delivery slot for the basket")
+    sp = cmd(
+        dsub,
+        "reserve",
+        cmd_delivery_reserve,
+        "reserve a delivery slot for the basket (exit 1 if not reserved)",
+    )
     sp.add_argument("slot_id", type=int)
 
     orders = cmd(sub, "orders", cmd_orders, "past orders, newest first; show one or reorder it")
@@ -612,22 +644,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _env_file(arg: str | None) -> Path:
+    """A ``./.env`` counts only when it holds ``NEMLIG_USER``, so another project's `.env` in the
+    working directory doesn't hide ``~/.config/nemlig/.env``."""
     if arg:
         return Path(arg).expanduser()
     if os.environ.get("NEMLIG_ENV_FILE"):
         return Path(os.environ["NEMLIG_ENV_FILE"]).expanduser()
     local = Path(".env")
-    if local.is_file():
+    if read_env_file(local).get("NEMLIG_USER"):
         return local
     base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
     return base / "nemlig" / ".env"
-
-
-def _prefs_file(a: argparse.Namespace) -> Path:
-    """``preferences.toml`` next to the `.env` in use, unless ``NEMLIG_PREFS_FILE`` says otherwise."""
-    if os.environ.get("NEMLIG_PREFS_FILE"):
-        return Path(os.environ["NEMLIG_PREFS_FILE"]).expanduser()
-    return _env_file(a.env_file).parent / "preferences.toml"
 
 
 def make_client(a: argparse.Namespace) -> NemligClient:
@@ -676,6 +703,8 @@ def _product_row(p: Product) -> str:
         parts.append(offer)
     if not p.available:
         parts.append("SOLD OUT")
+    if p.avoided:
+        parts.append("AVOID")
     return "  ".join(parts)
 
 

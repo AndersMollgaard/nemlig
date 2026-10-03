@@ -116,10 +116,14 @@ def test_search_cheaper_than_a_basket_line(api, customer, capsys):
     assert "offer: 2 for 14 kr (7.00 kr/kg)" in out
 
 
+def _write_prefs(tmp_path, text):
+    (tmp_path / "nemlig").mkdir(exist_ok=True)
+    (tmp_path / "nemlig" / "preferences.toml").write_text(text)  # ~/.config/nemlig
+
+
 def test_search_cheaper_than_applies_keep_and_avoid_rules(api, customer, capsys, tmp_path):
-    (tmp_path / ".env").write_text("")  # preferences.toml sits next to ./.env
-    (tmp_path / "preferences.toml").write_text(
-        '[[keep]]\nname = "popcorn"\nnote = "the kids choose"\n\n[[avoid]]\nbrand = "cheapo"\n'
+    _write_prefs(
+        tmp_path, '[[keep]]\nname = "popcorn"\nnote = "the kids choose"\n\n[[avoid]]\nbrand = "cheapo"\n'
     )
     api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
     search = api.get(f"{GW}/searchgateway/api/search").respond(
@@ -147,9 +151,42 @@ def test_prefs_add_and_show(capsys, tmp_path):
         "keep: id '5027015'",
         "avoid: brand 'First Price' name 'toiletpapir' (for tynd)",
     ]
-    assert (tmp_path / "nemlig" / "preferences.toml").is_file()  # next to ~/.config/nemlig/.env
+    assert (tmp_path / "nemlig" / "preferences.toml").is_file()  # ~/.config/nemlig
     code, _, err = run(capsys, "prefs", "keep")
     assert code == 2 and "at least one of id, brand or name" in err
+
+
+def test_an_unrelated_env_in_the_working_directory_is_ignored(api, capsys, tmp_path):
+    api.get(f"{WWW}/webapi/Token").respond(json=token_body())
+    (tmp_path / ".env").write_text("DATABASE_URL=x\n")  # another project's .env
+    _write_prefs(tmp_path, 'diet = "No pork."\n')
+    (tmp_path / "nemlig" / ".env").write_text("NEMLIG_USER=a@example.com\nNEMLIG_PASS=secret\n")
+    code, out, _ = run(capsys, "status")
+    assert code == 0 and json.loads(out)["has_credentials"] is True
+    code, out, _ = run(capsys, "--text", "prefs")
+    assert out.splitlines() == [f"file: {tmp_path / 'nemlig' / 'preferences.toml'}", "diet: No pork."]
+    # A ./.env with nemlig credentials still wins, and the preferences stay where they are.
+    (tmp_path / ".env").write_text("NEMLIG_USER=b@example.com\nNEMLIG_PASS=other\n")
+    assert cli._env_file(None).resolve() == (tmp_path / ".env").resolve()
+    code, out, _ = run(capsys, "--text", "prefs")
+    assert out.splitlines()[1] == "diet: No pork."
+
+
+def test_search_and_offers_mark_avoided_products(api, anonymous, capsys, tmp_path):
+    _write_prefs(tmp_path, '[[avoid]]\nname = "havregryn"\n')
+    api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
+    _, out, _ = run(capsys, "search", "havregryn", "--limit", "3")
+    products = json.loads(out)["products"]
+    assert products and all(p["avoided"] for p in products if "havregryn" in p["name"].lower())
+    assert all("avoided" not in p for p in products if "havregryn" not in p["name"].lower())
+    _, out, _ = run(capsys, "--text", "search", "havregryn")
+    assert any(row.endswith("  AVOID") for row in out.splitlines()[1:])
+    api.get(f"{GW}/productbff/api/web/page").respond(json=fixture("productbff_offers.json"))
+    _write_prefs(tmp_path, '[[avoid]]\nid = "5027568"\n')
+    _, out, _ = run(capsys, "--text", "offers", "--category", "koed")
+    rows = out.splitlines()
+    assert rows[0].startswith("5027568") and rows[0].endswith("  AVOID")
+    assert not any(row.endswith("AVOID") for row in rows[1:])
 
 
 @pytest.mark.parametrize(
@@ -261,6 +298,23 @@ def test_delivery_reserve_text_shows_the_price_change(api, customer, capsys):
     assert "(basket -30.80 kr; undeliverable: Peber)" in out
 
 
+def test_delivery_reserve_fails_with_exit_1(api, customer, capsys):
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
+    api.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime").respond(
+        json={"IsReserved": False, "Message": "Tidspunktet er udsolgt"}
+    )
+    code, out, err = run(capsys, "--text", "delivery", "reserve", "2400911")
+    assert code == 1 and out == ""
+    assert err.strip() == (
+        "error: slot 2400911 not reserved: Tidspunktet er udsolgt; "
+        "the basket's slot is tirs. 29/09 kl. 11-13 (reserved)"
+    )
+    # Reserved, but not the slot that was asked for.
+    api.post(f"{WWW}/webapi/Delivery/TryUpdateDeliveryTime").respond(json={"IsReserved": True})
+    code, _, err = run(capsys, "delivery", "reserve", "2400911")
+    assert code == 1 and json.loads(err)["error"] == "NotReservedError"
+
+
 def test_search_and_offers_take_a_slot(api, anonymous, capsys):
     api.get(f"{WWW}/webapi/v2/Delivery/GetDeliveryDays").respond(json=fixture("delivery_days_anonymous.json"))
     search = api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
@@ -271,6 +325,15 @@ def test_search_and_offers_take_a_slot(api, anonymous, capsys):
     assert offers.calls.last.request.url.params["timeslotId"] == "2400911"
     code, _, err = run(capsys, "offers", "--slot", "1")
     assert code == 2 and "no delivery slot 1" in err
+
+
+def test_slot_of_the_basket_needs_no_lookup(api, customer, capsys):
+    # No GetDeliveryDays route: the basket's own slot is priced from the basket's context.
+    api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
+    search = api.get(f"{GW}/searchgateway/api/search").respond(json=fixture("search.json"))
+    assert run(capsys, "search", "mælk", "--slot", "2403209")[0] == 0
+    params = search.calls.last.request.url.params
+    assert params["timeslotUtc"] == "2026092909-120-1260" and params["TimeSlotId"] == "2403209"
 
 
 @pytest.fixture
@@ -353,6 +416,10 @@ def test_restock(api, history, capsys):
     assert [i["product_id"] for i in data["due"]] == ["5012294", "5027015"]
     assert data["date"] == "2026-09-29" and data["to_review"] == 2
     assert offers.call_count == 1
+    # The basket's own slot needs no delivery-days lookup (there is no route for one).
+    code, out, _ = run(capsys, "restock", "--text", "--exclude", "Grønt", "--slot", "2403209")
+    assert code == 0 and out.startswith("due for tirs. 29/09 kl. 11-13 (add):")
+    assert offers.calls.last.request.url.params["timeslotId"] == "2403209"
 
 
 def test_restock_text_rows():

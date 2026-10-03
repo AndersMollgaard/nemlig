@@ -195,13 +195,18 @@ class NemligClient:
         """The delivery context of any slot in the next month (``DeliverySlot.id``).
 
         Search and offers priced with it show that slot's prices and offers, without reserving it.
-        Raises ``ValueError`` when the slot is not in the delivery days.
+        The basket's own slot needs no lookup. Raises ``ValueError`` when the slot is not in the
+        delivery days.
         """
-        zone_id = self.get_delivery_context().zone_id
+        current = self.get_delivery_context()
+        if current.slot_id == int(slot_id):
+            return current
         for day in self.get_delivery_days(days=SLOT_LOOKUP_DAYS):
             for slot in day.slots:
                 if slot.id == int(slot_id) and slot.timeslot_utc:
-                    return DeliveryContext(timeslot_utc=slot.timeslot_utc, zone_id=zone_id, slot_id=slot.id)
+                    return DeliveryContext(
+                        timeslot_utc=slot.timeslot_utc, zone_id=current.zone_id, slot_id=slot.id
+                    )
         raise ValueError(f"no delivery slot {slot_id} in the next {SLOT_LOOKUP_DAYS} days")
 
     def _context_for(self, slot_id: int | None) -> DeliveryContext:

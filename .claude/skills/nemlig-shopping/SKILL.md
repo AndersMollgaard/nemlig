@@ -41,10 +41,10 @@ Round trips matter most. Every step below is meant to save one.
 
 ## Preferences
 
-`preferences.toml` (next to the `.env`, so the repo root; gitignored) holds what the household
-always wants. Read it once per session, before choosing products: `nemlig --text prefs` prints
-it and its path, or says it isn't created yet (then copy `preferences.example.toml` from the
-repo root, or let the first `prefs keep`/`avoid` create it).
+`~/.config/nemlig/preferences.toml` holds what the household always wants. Read it once per
+session, before choosing products: `nemlig --text prefs` prints it and its path, or says it
+isn't created yet (then copy `preferences.example.toml` from the repo to that path, or let the
+first `prefs keep`/`avoid` create it).
 
 ```toml
 household = "2 adults, 1 child"
@@ -65,8 +65,8 @@ note = "too thin"
 - A `keep` or `avoid` rule matches a product when every field it sets matches: `id` exactly,
   `brand` ignoring case, and `name` as part of the product name. Use `name` to narrow a brand
   to one kind of product.
-- `search --cheaper-than` applies the rules itself. Plain `search` doesn't, so skip avoided
-  products yourself when choosing.
+- `search --cheaper-than` and `restock` apply the rules themselves. `search` and `offers` mark
+  avoided products `AVOID`. Don't pick those.
 - When the user corrects you in a way that will hold next time, record it, and mention it in
   the report. Don't record one-off choices.
   - "Don't touch the coffee", "we always buy that one":
@@ -138,6 +138,24 @@ In order of priority:
   asked for it in this conversation. Choosing a delivery slot for `nemlig-dinners` or
   `nemlig-fill-basket` counts as asking for it to be reserved. Clearing the basket keeps the reserved delivery slot.
 
+## Reserving a delivery slot
+
+Reserve before the first add, on its own, so the basket is priced for the slot the user chose:
+```sh
+nemlig --text delivery reserve SLOT_ID
+```
+- **Success** prints `reserved: fre. 02/10 kl. 17-18`, sometimes with notes about the lines
+  already in the basket, now at the new slot's prices:
+  `(basket -91.21 kr; undeliverable: Peberfrugt rød)`. Mention a price change in the report
+  ("moving to Friday made the basket 91.21 kr cheaper"). The new slot won't bring the
+  undeliverable lines: list them in the report, and replace any that your plan relies on.
+- **Failure** exits 1 with `error: slot … not reserved: <reason>`. Add nothing. Show the
+  nearest bookable slots (`nemlig --text delivery --available --days 3 --start DAY`) and ask.
+- **After reserving,** pass `--slot SLOT_ID` to `restock`, `offers` and `search` for the rest of
+  the session. It costs nothing for the basket's own slot and keeps their prices for that slot
+  if the hold lapses. Before the last basket change, if the latest basket output says
+  `(not reserved)`, reserve again.
+
 ## Reporting
 
 Keep it short. Show what changed and what the user should check:
@@ -165,7 +183,9 @@ starts with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat
   the user accepts.
 - **Chained** (`nemlig-fill-basket` invoked it and says so): no report of its own. It makes
   only the basket changes it was told to make, asks the user only at its own checkpoints (as
-  `nemlig-dinners` does), and hands back one block:
+  `nemlig-dinners` does), and hands back one block. It doesn't read `prefs` again, takes the
+  basket from the latest basket output in the conversation, and passes the orchestrator's
+  `--slot SLOT_ID`:
   ```
   Applied:
   - (basket changes made, or "none")
@@ -190,7 +210,7 @@ nemlig --text offers --slot SLOT_ID                 # another slot's offers, wit
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)
 nemlig --text delivery --available --days 3         # bookable slots: SLOT_ID time price
-nemlig --text delivery reserve SLOT_ID              # only when asked; prints the basket's price change and undeliverable lines
+nemlig --text delivery reserve SLOT_ID              # only when asked (see Reserving a delivery slot)
 nemlig --help                                       # everything else
 ```
 

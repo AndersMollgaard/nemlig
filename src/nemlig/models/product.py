@@ -37,6 +37,9 @@ class Product(Model):
     """Percent off, from the price before the offer or a multi-buy deal (offers and favourites only)."""
     available: bool = True
     favourite: bool = False
+    avoided: bool | None = None
+    """True when an ``avoid`` rule in the household's preferences matches. Set by the CLI, not
+    the API."""
     slug: str | None = None
     """Path of the product page on www.nemlig.com, usable with ``get_product``."""
     image: str | None = None

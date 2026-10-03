@@ -41,7 +41,8 @@ here and are not repeated.
      packs are not a 1 l carton, and a flavoured variant is not the plain one.
    - keeps every **constraint label** of the original (øko, laktosefri, glutenfri, fat %) and
      every preference. Read them from the name ("øko.", "laktosefri"). If a name doesn't
-     settle it, run one JSON `nemlig search` for just those queries and check `labels`.
+     settle it, run one `nemlig search Q...` without `--text` for just those queries and check
+     `labels`.
    - has a **sensible pack size** for the household. No 5 kg sack to replace 500 g unless the
      household would use it.
 6. **Compare unit prices, not shelf prices.**
@@ -90,6 +91,8 @@ the minimum-order line from that command's output.
 
 ## Chained: hand back
 
-Don't ask or apply anything. Return the base skill's handoff block, with `Applied: none` and
+Skip step 1: the orchestrator has read `prefs`. Still read the basket as JSON (step 2), since
+the text output leaves out the unit prices. Add the orchestrator's `--slot SLOT_ID` to the
+search. Don't ask or apply anything. Return the base skill's handoff block, with `Applied: none` and
 one `Proposed:` line per swap (old id → new id, quantity, saving, unit prices). Put choices
 only the user can make, such as a borderline "same kind", under `Questions:`.

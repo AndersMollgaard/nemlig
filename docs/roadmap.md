@@ -27,8 +27,8 @@ they belong to. Phase 5 depends only on Phase 2, so it can be done before Phases
   basket".
 - **One report when chained.** In a chained run, sub-skills hand back their changes and proposals
   instead of reporting to the user. The orchestrator reports once.
-- **Personal data stays out of git.** Preferences go in the gitignored `preferences.toml` next to
-  `.env` (the repo root). Cached orders go under `~/.cache/nemlig/`.
+- **Personal data stays out of git.** Preferences and product groups go in `~/.config/nemlig/`.
+  Cached orders go under `~/.cache/nemlig/`.
 - **Never retry writes.** This rule still applies to every skill.
 
 ## Phase 0: Foundations
@@ -43,6 +43,12 @@ they belong to. Phase 5 depends only on Phase 2, so it can be done before Phases
     rule matches on `id`, `brand` and part of the `name`, all that are set. `nemlig prefs` shows
     the file, and `prefs keep|avoid` appends rules, so skills don't hand-edit TOML. Only lasting
     corrections are recorded.
+  - Moved (2026-10-03, after a design review): `~/.config/nemlig/preferences.toml`, next to
+    `groups.json`. "Next to `.env`" depended on the working directory: run from another
+    project, the skills read that project's missing file and lost `diet` and the avoid rules
+    without a word, and an unrelated `./.env` hid the credentials. `./.env` now counts only
+    when it sets `NEMLIG_USER`. Avoid rules are also marked `AVOID` in `search` and `offers`,
+    the two commands dinners picks from, so no skill matches rules by eye.
 - [x] **Order-history paging.** `get_orders` (`src/nemlig/client.py`) sends `page` as `skip`.
   Check live how `GetBasicOrderHistory` pages and how far back history goes. Write the findings
   in `docs/nemlig-api.md`.
@@ -211,6 +217,19 @@ review them. Skill only: no CLI change is planned.
   (choosing a slot there counts as asking), and in `README.md` with its install symlink.
 - [x] **Live run.** One "fill my basket for the week" on the real account, and `nemlig-cheaper`
   and `nemlig-dinners` alone again after their *Chained* sections changed.
+- [x] **Hardening** (2026-10-03, after a design review). None of it adds a call to a run.
+  - `delivery reserve` exits 1 when the slot isn't reserved (or another one is), instead of
+    exit 0 and a `not reserved:` line every skill had to parse. The reserve procedure lives
+    once, in the base skill's *Reserving a delivery slot*.
+  - After reserving, the run passes `--slot` to `restock`, `offers` and `search`. It costs no
+    request for the basket's own slot, and keeps the prices for the chosen slot if the hold
+    lapses. The report re-reserves when the last basket output says `(not reserved)`.
+  - Chained sub-skills don't read `prefs` or the text basket again (it was read 4 and 3
+    times a run). Cross-skill references name sections instead of step numbers, and
+    `tests/test_skills.py` parses every `nemlig` command the skills quote.
+  - The restock maybes move to the closing question when dinners has no first checkpoint
+    ("just pick", no dinners). The closing question asks for anything else to add, and
+    everything it settles goes in one `basket set`. Restock's group merges are reported.
 
 Done when one request produces a full basket and one report, and each sub-skill still works on
 its own. Confirmed by the user on a live run (2026-10-01).
