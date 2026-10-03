@@ -150,8 +150,11 @@ ingredients. [`nemlig-restock`](.claude/skills/nemlig-restock/SKILL.md) adds the
 that are due, predicted from the order history, and lets the user pick from the less certain
 ones. [`nemlig-fill-basket`](.claude/skills/nemlig-fill-basket/SKILL.md) chains them for a
 week's basket: it restocks, runs the dinners, then proposes cheaper swaps for the whole basket
-in one report. They all read the household preferences with `nemlig prefs`, and record lasting
-corrections as `keep` and `avoid` rules.
+in one report. [`nemlig-recipes`](.claude/skills/nemlig-recipes/SKILL.md) turns the planned
+dinners into a private recipe page on claude.ai, with a card per night. The fill-basket run
+starts it in the background, right after the dinners are added. The shopping skills all read the
+household preferences with `nemlig prefs`, and record lasting corrections as `keep` and `avoid`
+rules.
 
 To shop from any directory, install the command and the skills for your user:
 
@@ -162,6 +165,7 @@ ln -s "$PWD/.claude/skills/nemlig-cheaper" ~/.claude/skills/nemlig-cheaper
 ln -s "$PWD/.claude/skills/nemlig-dinners" ~/.claude/skills/nemlig-dinners
 ln -s "$PWD/.claude/skills/nemlig-restock" ~/.claude/skills/nemlig-restock
 ln -s "$PWD/.claude/skills/nemlig-fill-basket" ~/.claude/skills/nemlig-fill-basket
+ln -s "$PWD/.claude/skills/nemlig-recipes" ~/.claude/skills/nemlig-recipes
 cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
 cp preferences.example.toml ~/.config/nemlig/preferences.toml   # then fill it in
 ```

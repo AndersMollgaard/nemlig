@@ -1,0 +1,192 @@
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column of night cards under a sticky night switcher; on wide screens each card splits into ingredients | method. */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #1b2620;
+  --muted: #5a6a62;
+  --line: #d9e1db;
+  --tint: #e7eee9;
+  --accent: #2e6a4e;
+  --on-accent: #ffffff;
+  --fish: #d0604a;
+  --poultry: #a97a17;
+  --beef: #a23b3b;
+  --pork: #b0566f;
+  --lamb: #76589e;
+  --veg: #c9601a;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111714; --surface: #18201c; --ink: #e4ebe6; --muted: #98a79f; --line: #2a3530;
+    --tint: #1f2a25; --accent: #7cc4a0; --on-accent: #0f1a14;
+    --fish: #f08e78; --poultry: #e0b452; --beef: #e88080; --pork: #ec98b0; --lamb: #b89ae2; --veg: #f0924a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111714; --surface: #18201c; --ink: #e4ebe6; --muted: #98a79f; --line: #2a3530;
+  --tint: #1f2a25; --accent: #7cc4a0; --on-accent: #0f1a14;
+  --fish: #f08e78; --poultry: #e0b452; --beef: #e88080; --pork: #ec98b0; --lamb: #b89ae2; --veg: #f0924a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.55 var(--body); }
+.wrap { max-width: 60rem; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 20px; }
+
+header { display: grid; gap: 10px; }
+.eyebrow { font: 500 0.75rem/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 40rem; color: var(--muted); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 0.9375rem; }
+.facts b { font-weight: 700; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.92em; }
+
+nav.nights {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2;
+  display: flex; gap: 8px; overflow-x: auto; padding-block: 10px;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+nav.nights a {
+  flex: none; display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--ink); text-decoration: none; font-size: 0.9375rem;
+}
+nav.nights a:hover { border-color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dish); flex: none; }
+
+article.night {
+  scroll-margin-top: 72px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 22px 20px 24px; display: grid; gap: 18px;
+}
+.fish { --dish: var(--fish); }
+.poultry { --dish: var(--poultry); }
+.beef { --dish: var(--beef); }
+.pork { --dish: var(--pork); }
+.lamb { --dish: var(--lamb); }
+.veg { --dish: var(--veg); }
+
+.night-head { display: grid; gap: 6px; }
+.night-head .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--dish); }
+h2 { font: 700 clamp(1.45rem, 4.2vw, 1.9rem)/1.12 var(--display); letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
+.en { margin: 0; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 0.9375rem; }
+.meta li { display: inline-flex; gap: 6px; }
+.meta span:first-child { color: var(--muted); }
+
+.cols { display: grid; gap: 22px; }
+@media (min-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); gap: 32px; } }
+.cols > section { min-width: 0; display: grid; gap: 10px; align-content: start; }
+h3 { font: 700 0.8125rem/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; margin: 0; color: var(--muted); }
+.group + h3 { margin-top: 8px; }
+
+ul.ingredients { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+ul.ingredients label {
+  display: grid; grid-template-columns: auto 4.6rem minmax(0, 1fr); gap: 10px; align-items: baseline;
+  padding: 6px 4px; border-radius: 8px; cursor: pointer;
+}
+ul.ingredients label:hover { background: var(--tint); }
+ul.ingredients input { accent-color: var(--accent); width: 1.05rem; height: 1.05rem; margin: 0; transform: translateY(2px); }
+.amt { font: 500 0.875rem/1.4 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.pack { display: block; font-size: 0.8125rem; color: var(--muted); }
+label:has(input:checked) .item, label:has(input:checked) .amt { text-decoration: line-through; color: var(--muted); }
+
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; counter-reset: step; }
+ol.steps li { counter-increment: step; }
+ol.steps label {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 12px; align-items: start;
+  padding: 8px 6px; border-radius: 10px; cursor: pointer;
+}
+ol.steps label:hover { background: var(--tint); }
+ol.steps input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.badge {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--dish); color: var(--ink); font: 500 0.875rem/1 var(--mono);
+}
+.badge::before { content: counter(step); }
+label:has(input:checked) .badge { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+label:has(input:checked) .badge::before { content: "✓"; }
+label:has(input:checked) .step-text { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+label:has(input:focus-visible) .badge, ul.ingredients input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.step-text { padding-top: 3px; }
+
+.notes { display: grid; gap: 8px; }
+@media (min-width: 760px) { .notes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.note { margin: 0; background: var(--tint); border-radius: 12px; padding: 12px 14px; font-size: 0.9375rem; }
+.note b { display: block; font: 700 0.75rem/1.3 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font-size: 0.9375rem; color: var(--muted); }
+.tools button {
+  font: 700 0.9375rem/1 var(--body); padding: 10px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.tools button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.tools button:focus-visible, nav.nights a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+@media print {
+  nav.nights, .tools { display: none !important; }
+  body { background: #fff; color: #000; }
+  article.night { break-inside: avoid; border: none; padding: 0 0 24px; }
+}
+</style>
+
+<div class="wrap" data-key="{{KEY}}">
+{{CONTENT}}
+  <div class="tools">
+    <button type="button" id="wake" aria-pressed="false" hidden>Keep screen on</button>
+    <button type="button" id="clear">Clear ticks</button>
+    <span>Your ticks are saved on this device only.</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KEY = document.querySelector(".wrap").getAttribute("data-key");
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type="checkbox"]'));
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
+  boxes.forEach(function (b) {
+    if (state[b.id]) b.checked = true;
+    b.addEventListener("change", function () {
+      if (b.checked) state[b.id] = 1; else delete state[b.id];
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+    });
+  });
+  document.getElementById("clear").addEventListener("click", function () {
+    boxes.forEach(function (b) { b.checked = false; });
+    state = {};
+    try { localStorage.removeItem(KEY); } catch (e) {}
+  });
+
+  var wake = document.getElementById("wake");
+  var lock = null;
+  function show() {
+    wake.setAttribute("aria-pressed", lock ? "true" : "false");
+    wake.textContent = lock ? "Screen stays on" : "Keep screen on";
+  }
+  if ("wakeLock" in navigator) {
+    wake.hidden = false;
+    wake.addEventListener("click", function () {
+      if (lock) { lock.release(); lock = null; show(); return; }
+      navigator.wakeLock.request("screen").then(function (l) {
+        lock = l;
+        l.addEventListener("release", function () { lock = null; show(); });
+        show();
+      }).catch(function () {
+        wake.textContent = "Can't keep the screen on here";
+        wake.disabled = true;
+      });
+    });
+  }
+})();
+</script>

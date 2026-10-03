@@ -145,7 +145,8 @@ added before both.
    2. Run one `basket add` for the chosen dishes, with the ids and quantities from step 6.
       Don't search again. Report as in the base skill, with one line per night (dish, cost).
       Take the basket total, the minimum-order line and the slot from that output. The slot
-      should now read `(reserved)`.
+      should now read `(reserved)`. End the report with one line, "Want the recipes as a
+      page?", and load `nemlig-recipes` on a yes.
 
 If the user says "just pick", "surprise me" or similar, skip both checkpoints. Choose the
 anchors and the N dishes yourself, then reserve and add as in step 8, and report the dishes
@@ -161,7 +162,7 @@ Run the flow with both checkpoints, as alone. The orchestrator has read `prefs` 
 basket, settled and reserved the slot, and gives its id, the nights and the people. So in
 *Context* run only `nemlig --text orders --limit 1` (then `orders show`), skip the *Delivery
 slot* question, and in *Reserve the slot, then add* skip the reservation: run the one
-`basket add` and don't report. Hand back the base skill's block: one
-`Applied:` line per night with the dish, its cost and the product ids added
-(`Fri: Ovnstegt kylling med citron, 131 kr: 5066317:1 2301103:2`). Under `Questions:`, list
-the assumed-at-home items worth checking.
+`basket add`, and don't report or offer the recipes (the orchestrator starts them). Hand back
+the base skill's block: one `Applied:` line per night with the dish, its cost and the product
+ids added (`Fri: Ovnstegt kylling med citron, 131 kr: 5066317:1 2301103:2`). Under
+`Questions:`, list the assumed-at-home items worth checking.

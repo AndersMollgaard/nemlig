@@ -178,6 +178,8 @@ last `basket` command printed.
 `nemlig-restock` (the usual items that are due) do one job each on top of this skill.
 `nemlig-fill-basket` chains them for a week's basket. Every sub-skill
 starts with "Load `nemlig-shopping` first if it isn't loaded" and doesn't repeat the rules here.
+`nemlig-recipes` writes a recipe page for the planned dinners. It doesn't shop.
+`nemlig-fill-basket` runs it as a background subagent, so the run doesn't wait for it.
 
 - **Alone** (the user asked for it): it reports to the user as in *Reporting* and applies what
   the user accepts.

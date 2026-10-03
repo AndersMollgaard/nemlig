@@ -212,7 +212,8 @@ review them. Skill only: no CLI change is planned.
   budget only when `budget` is set.
   - Decided (2026-10-01, by the user): swaps are only proposed, and applied after one yes in
     the report.
-  - Phase 5 adds "Want the recipes as a page?" to the same closing question.
+  - Phase 5 starts the recipe page as a background subagent after the dinner add, and the
+    report carries its link (it used to plan "Want the recipes as a page?" here).
 - [x] **Docs.** List `nemlig-fill-basket` in the base skill's *Sub-skills* and its reserve rule
   (choosing a slot there counts as asking), and in `README.md` with its install symlink.
 - [x] **Live run.** One "fill my basket for the week" on the real account, and `nemlig-cheaper`
@@ -310,26 +311,40 @@ Done when the user accepts most of the due rows and finds the maybe list relevan
 
 ## Phase 5: `nemlig-recipes` (recipe artifacts)
 
-- [ ] **Skill.** `nemlig-recipes` turns the chosen dinners into one recipe artifact: a private
+- [x] **Skill.** `nemlig-recipes` turns the chosen dinners into one recipe artifact: a private
   claude.ai page with a card per night. Each card has the dish, time, portions (from
   `household`), the ingredients with amounts, and the steps. Ingredients are marked as bought
   on nemlig (name and pack) or assumed at home. A dish that uses another night's leftovers
-  says so. Load `artifact-design` before writing the page. It must work on a phone and print
-  cleanly.
+  says so. It must work on a phone and print cleanly.
   - Input: the dishes and picks from `nemlig-dinners` in the same conversation. Alone ("make
     recipes for this week's dinners"), it takes the dishes from the user and reads the basket
     for what was bought. It doesn't guess dishes from basket lines.
   - Its description is narrow ("recipes", "recipe page", "how do I cook these"). It doesn't
     trigger on "what's for dinner".
-  - Decide when building: whether a new week's recipes go to a new page or update the same one,
-    and whether the page gets a shared checklist for ingredients and steps.
-- [ ] **Hook in `nemlig-dinners`.** After the basket add and the report, it offers the recipes
+  - Decided (2026-10-03, after a first page made by hand): the design is fixed in
+    `template.html`, and `render.py` fills it from a JSON file (`example.json` is week 41). A
+    run writes content only, which keeps it fast and the pages consistent, and the renderer
+    escapes every text. `tests/test_recipes.py` renders the example.
+  - Decided: each week gets a new page, `Week NN Dinners`, so earlier weeks stay. Ticks on
+    ingredients and steps are per viewer in `localStorage`, not shared: one phone cooks from it,
+    and a shared checklist would need the `db` capability. The page is in English with the
+    Danish dish and product names. It names the kind of product, not the brand, so a cheaper
+    swap of the same kind keeps it right.
+  - Decided: the cooking order follows what keeps the shortest (fish first, then mince, other
+    meat, vegetarian and frozen). The first night is the delivery day only if the slot ends by
+    17:00.
+- [x] **Hook in `nemlig-dinners`.** After the basket add and the report, it offers the recipes
   in one line ("Want the recipes as a page?") and loads `nemlig-recipes` on a yes. It doesn't
-  publish without asking. Chained, it doesn't offer. The orchestrator asks once at the end of
-  its report instead.
+  publish without asking. Chained, it doesn't offer.
+- [x] **Hook in `nemlig-fill-basket`.** Right after the dinner add, the orchestrator starts
+  `nemlig-recipes` as a background subagent (one `Agent` call) with a recipe brief built from
+  what the run already has, and goes on to cheaper without waiting. The report carries the link,
+  or "on their way" and the link in the next message.
+  - Decided (2026-10-03, by the user): a subagent, so the page never blocks the order flow with
+    the user. It costs no `nemlig` call. The agent never asks and never touches the basket.
+- [ ] **Live run.** One fill-basket run where the link arrives without holding up the report.
 
-Done when a real dinner run ends with one yes and a recipe page that matches what went into the
-basket.
+Done when a real dinner run ends with a recipe page that matches what went into the basket.
 
 ## In every phase
 

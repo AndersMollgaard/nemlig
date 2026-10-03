@@ -1,0 +1,114 @@
+{
+  "title": "Week 41 Dinners",
+  "eyebrow": "Week 41 · delivery ons. 07/10, 16–21",
+  "lede": "Three dinners for 2 adults and 2 kids, each made from this week's offers. Cook the salmon first, since it keeps the shortest. The squash will keep for weeks.",
+  "facts": [["3", "dinners"], ["4", "portions each"], ["341.76 kr", "for all three"]],
+  "nights": [
+    {
+      "day": "Thu 08/10",
+      "kind": "fish",
+      "short": "Laks",
+      "name": "Laks i citron-flødesauce med spaghetti og spinat",
+      "en": "Salmon in a lemon cream sauce with spaghetti and spinach",
+      "time": "25 min",
+      "serves": "4",
+      "cost": "144.45 kr",
+      "basket": [
+        ["600 g", "Laksefilet m. skind", "the whole pack"],
+        ["100 g", "Babyspinat øko", "the whole bag"],
+        ["5 dl", "Madlavningsfløde 15%", "both cartons"],
+        ["1", "Citron lille øko", "1 of 2"],
+        ["1 tbsp", "Lurpak Smørbar"]
+      ],
+      "home": [
+        ["400 g", "Spaghetti"],
+        ["40 g", "Grana Padano, plus more for the table"],
+        ["2", "Garlic cloves"],
+        ["1 tbsp", "Oil, plus salt and pepper"]
+      ],
+      "steps": [
+        "Cook the spaghetti in plenty of salted water as the pack says. Save 1 dl of the pasta water before you drain it.",
+        "Cut the salmon off the skin and into 3 cm cubes. Salt lightly.",
+        "Heat the oil in a large frying pan over medium-high heat. Sear the salmon for 2 minutes, turning once, so it is golden outside and still soft inside. Lift it onto a plate.",
+        "Turn the heat down. Melt the butter and fry the grated garlic for 1 minute without browning it. Add the cream and the lemon zest, then simmer for 3–4 minutes until slightly thickened.",
+        "Stir in the spinach until it wilts, then the Grana. Season with salt, pepper and the juice of half the lemon.",
+        "Toss the spaghetti in the sauce with a splash of pasta water. Fold the salmon back in and warm it through for a minute. Serve with more Grana."
+      ],
+      "notes": [
+        ["Kids", "Dish up their plates before you add the pepper."],
+        ["Save", "Wrap the other half of the lemon. Saturday's soup uses it."]
+      ]
+    },
+    {
+      "day": "Fri 09/10",
+      "kind": "poultry",
+      "tag": "Chicken",
+      "short": "Kylling",
+      "name": "Ovnstegt kylling med citron, kartofler og gulerødder",
+      "en": "Roast chicken with lemon, potatoes and carrots",
+      "time": "75 min, 15 hands-on",
+      "serves": "4",
+      "cost": "114.75 kr",
+      "basket": [
+        ["1,35 kg", "Hel kylling", "Gårdkylling"],
+        ["1,2 kg", "Kartofler øko", "of 2 kg"],
+        ["500 g", "Gulerødder øko", "of 1 kg"],
+        ["1", "Citron lille øko", "the second one"],
+        ["2 tbsp", "Lurpak Smørbar, soft"]
+      ],
+      "home": [
+        ["3", "Garlic cloves"],
+        ["2 tsp", "Dried thyme"],
+        ["2 tbsp", "Oil, plus salt and pepper"]
+      ],
+      "steps": [
+        "Heat the oven to 200 °C (180 °C fan). Take the chicken out of the fridge while you prep.",
+        "Cut the potatoes into wedges and the carrots into thick sticks. Toss them in a roasting tin with the oil, 1 tsp thyme and 1 tsp salt.",
+        "Pat the chicken dry. Mix the butter with the lemon zest, 1 tsp thyme, salt and pepper, and rub it all over the skin.",
+        "Halve the zested lemon and push both halves into the cavity with the lightly crushed garlic. Set the chicken breast-up on top of the vegetables.",
+        "Roast for 60–70 minutes, turning the vegetables halfway. The chicken is done when the juices from the thigh run clear, or 75 °C at the thickest part.",
+        "Rest the chicken under foil for 10 minutes. Meanwhile, turn the oven up to 225 °C to crisp the vegetables. Carve, then spoon the juices from the tin over the potatoes."
+      ],
+      "notes": [
+        ["Kids", "Thighs and drumsticks stay the juiciest. Give the kids those."],
+        ["Left over", "About 800 g of potatoes and 500 g of carrots. Both keep for the week."]
+      ]
+    },
+    {
+      "day": "Sat 10/10",
+      "kind": "veg",
+      "short": "Hokkaido",
+      "name": "Hokkaidosuppe med kokos og ingefær",
+      "en": "Hokkaido squash soup with coconut and ginger, served with warm flutes",
+      "time": "40 min",
+      "serves": "4, plus a lunch",
+      "cost": "82.56 kr",
+      "basket": [
+        ["1,5 kg", "Hokkaido Stor øko", "the whole squash"],
+        ["8 dl", "Kokosmælk 17–19%", "both cans"],
+        ["4 cm", "Ingefær øko", "of 200 g"],
+        ["1–2 tsp", "Rød karrypasta", "of 110 g"],
+        ["8", "Miniflutes, frozen", "of about 12"]
+      ],
+      "home": [
+        ["1", "Onion"],
+        ["2", "Garlic cloves"],
+        ["7 dl", "Vegetable stock", "1 cube"],
+        ["½", "Lemon, saved from Thursday"],
+        ["2 tbsp", "Oil, plus salt"]
+      ],
+      "steps": [
+        "Halve the squash and scoop out the seeds. Cut it into 3 cm chunks and leave the skin on, because it softens as it cooks.",
+        "Chop the onion and garlic and grate the ginger. Soften them in the oil in a large pot over medium heat for 4 minutes.",
+        "Stir in the curry paste and fry it for 1 minute. Use 1 tsp to keep it mild for the kids, or 2 for more heat.",
+        "Add the squash, the stock and one can of coconut milk. Cover and simmer for 20 minutes, until the squash is soft.",
+        "Meanwhile, bake the flutes from frozen as the bag says.",
+        "Blend the soup smooth. Stir in most of the second can until the soup is thick but pourable. Season with salt and the lemon juice, then swirl the rest of the coconut milk on top."
+      ],
+      "notes": [
+        ["Left over", "About 1½ l of soup, enough for a lunch. It freezes well."],
+        ["Save", "Freeze the rest of the ginger and grate it straight from frozen."]
+      ]
+    }
+  ]
+}

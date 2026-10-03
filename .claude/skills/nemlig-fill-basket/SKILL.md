@@ -1,6 +1,6 @@
 ---
 name: nemlig-fill-basket
-description: Fill the user's nemlig.com basket for the week in one run. Restocks the usual items that are due, plans dinners around the offers with the user, then proposes cheaper swaps for the whole basket, and reports once. Use when the user asks to fill their basket, do the weekly shop, or make a basket for the week.
+description: Fill the user's nemlig.com basket for the week in one run. Restocks the usual items that are due, plans dinners around the offers with the user, then proposes cheaper swaps for the whole basket, and reports once, with a recipe page written in the background. Use when the user asks to fill their basket, do the weekly shop, or make a basket for the week.
 allowed-tools: Bash(nemlig:*), Bash(uv run nemlig:*)
 ---
 
@@ -11,7 +11,8 @@ handoff format apply here and are not repeated.
 
 This skill chains the sub-skills in a fixed order: slot, restock, dinners, cheaper. Restock
 comes first so its lines count as at home when the dinners are priced. Cheaper comes last
-because it compares against basket lines, so it reviews everything this run added. The run
+because it compares against basket lines, so it reviews everything this run added. Once the
+dinners are added, a background agent writes the recipe page while the run continues. The run
 builds on the current basket and never clears it.
 
 ## Flow
@@ -53,10 +54,18 @@ builds on the current basket and never clears it.
 
    When there is no first checkpoint (no dinners this time, or "just pick"), the maybes go to
    the closing question instead.
-5. **Cheaper over the whole basket.** Load `nemlig-cheaper` and follow its *Chained* section,
+5. **Recipes, in the background.** Right after the dinner add, start the recipe page as a
+   background subagent, so it gets written while the run goes on. Make one `Agent` call
+   (general-purpose) with the prompt "Load the `nemlig-recipes` skill and follow its
+   *Subagent* section with this brief:" followed by the brief, in the format that skill shows.
+   Build the brief from what the run already has: `household` and `diet` from `prefs`, the
+   slot, the dishes and their costs from the dinners hand-back, and the bought products from
+   the add output. It costs no `nemlig` call. Don't wait for it, and go on to step 6. Skip
+   this step when the run added no dinners.
+6. **Cheaper over the whole basket.** Load `nemlig-cheaper` and follow its *Chained* section,
    with the slot id. It reads the basket fresh, so the restocked and dinner lines are reviewed
    with the rest, and hands back proposals without applying any.
-6. **One report, one question.** Build it from the handoff blocks and the last basket output.
+7. **One report, one question.** Build it from the handoff blocks and the last basket output.
    If that output says `(not reserved)`, the hold has lapsed: reserve the slot again first, and
    take the slot from that output.
    ```
@@ -68,6 +77,7 @@ builds on the current basket and never clears it.
    Cheaper swaps (saves 19.90 kr):
    1. Minimælk øko 1 l, Arla 2x → Øko 2x: 25.95 → 20.95 kr/l, saves 10.00 kr
    2. Hakket oksekød 8-12% 500 g, Coop → Danish Crown (2 for 90 kr): saves 9.90 kr
+   Recipes: https://claude.ai/artifact/... (Fri, Sat)
    Check: rice and soy sauce at home? (assumed for Mon)
    Moving to Friday made the basket 91.21 kr cheaper. Undeliverable: Peberfrugt rød.
    Basket: 1,148.20 kr (budget about 1,200 kr). Delivery fre. 02/10 17-18 (reserved).
@@ -78,6 +88,10 @@ builds on the current basket and never clears it.
    - Leave out a section that is empty, and the question about swaps when there are none.
    - Maybes that no checkpoint showed go under the restocked line by letter, with "pick any
      maybes by letter" in the question.
+   - `Recipes:` gives the link if the recipe agent has handed it back. Otherwise write
+     "Recipes: on their way". When the agent hands back later, give the link in one line, in
+     the next message or in the reply to the closing question. If it failed, say so in one
+     line and offer to make the page with `nemlig-recipes`.
 
    The restocked line counts the due items and the picked maybes together.
 
@@ -85,7 +99,9 @@ builds on the current basket and never clears it.
    restock lines as `ID:0`, picked maybes as `ID:QTY`, and things the user adds at their total
    quantity (one `search` with `--slot` first). It is absolute, so it is safe to repeat after
    an error. Record a "never" as `nemlig-cheaper` does alone, and say so. Finish with the new
-   basket total and slot from that output.
+   basket total and slot from that output. A swap keeps the kind of product, so the recipe
+   page stays right. If the user drops or changes a dish, say the page is out of date and
+   offer to redo it.
 
 ## Rules
 
@@ -93,6 +109,7 @@ builds on the current basket and never clears it.
   two checkpoints (the restock maybes ride along with the first), and the closing question.
   Everything else is decided and reported.
 - Each sub-skill gets the slot and its instructions from this skill and hands back one block.
-  Only this skill reports to the user.
+  Only this skill reports to the user. The recipe agent is the exception. It runs on its own,
+  never asks, never touches the basket, and hands back only a link.
 - Never `basket add` twice for the same items. If an add fails, follow the base skill's
   *Changing the basket* rules before going on.
