@@ -28,11 +28,12 @@ to review: 4 new products (nemlig restock groups)
 - A row is one need, such as "letmælk" in any brand. It names the product bought most
   recently and the usual quantity (`x3`).
 - `80%` is the chance it is bought in this order. **Due** rows (55% and up) were right about
-  70% of the time in a backtest on 135 orders. **Maybe** rows were right about half the time,
-  so the user picks from them. Slow movers (toilet paper, flour) rarely go above 50%,
+  70% of the time in a backtest on 135 orders. **Maybe** rows were right about 4 times in
+  10, so the user picks from them. Slow movers (toilet paper, flour) rarely go above 50%,
   because their gaps vary a lot.
 - `offer:` means the product is on offer for the slot. A maybe below 30% shows up only
-  because of an offer: it is a stock-up suggestion.
+  because of an offer: it is a stock-up suggestion, made only for products bought at least 3
+  times in the last year.
 - Products in the basket, `avoid` matches and products not bought for a year are already left
   out.
 - The date is the basket's slot. `(not reserved)` means it is only the earliest free one. If

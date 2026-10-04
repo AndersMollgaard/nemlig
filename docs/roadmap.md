@@ -275,7 +275,8 @@ buying" are out.
     smoothed toward the rate bin and that toward the overall share. That is the hierarchical
     shrinkage, done as empirical Bayes. Upcoming orders count as bought on their delivery date.
   - Tiers: due at P ≥ 0.55. Maybe at P ≥ 0.3, the likeliest 12. Plus up to 3 groups at
-    P ≥ 0.1 with a product on offer at 20% or more for the slot.
+    P ≥ 0.1 with a product on offer at 20% or more for the slot, if bought in 3 or more orders
+    in the last year (added after the burn-rate experiment below).
   - The suggested product is the group's latest one that no `avoid` rule matches. Brand rules
     use the description's last part. The quantity is the median of the last 3 purchases.
   - Tried and dropped, because none moved precision or recall by more than 0.02: category as a
@@ -306,6 +307,44 @@ buying" are out.
   skill sends "the usual" and "restock" to it.
 - [ ] **Live run.** One "fill my basket for the week" with the new step 3, and `nemlig-restock`
   alone.
+- [x] **Burn-rate model experiment** (2026-10-04, asked by the user). Each group gets a daily
+  burn rate in pack units (g, ml, stk, parsed from the description; 98% of lines parse) and a
+  stash carried over from recent buys. It is due when the stash runs out before the next
+  order, for regular groups only. A harness with numpy, scipy, scikit-learn and pandas compared
+  it with the current model (C), tuned on orders −80..−41 and reported on the last 40, without
+  `Kød & fisk`. The model and the harness were removed after the decision below.
+
+  | Holdout | Due items | Precision | Recall | Precision at C's due+maybe size |
+  | --- | --- | --- | --- | --- |
+  | C, the current model | 8.1 | 0.70 | 0.15 | 0.54 |
+  | B1 burn, tuned for F1 | 26.0 | 0.42 | 0.30 | 0.41 |
+  | B1 burn, in ≥40% of the last 12 orders | 7.1 | 0.67 | 0.13 | |
+  | B2 burn as P(stash runs out), fitted with scipy | 23.9 | 0.43 | 0.27 | 0.44 |
+  | B4 C's table with stash cover for the gap ratio | 9.2 | 0.66 | 0.16 | 0.55 |
+  | B3 logistic regression on every feature | 8.9 | 0.69 | 0.17 | 0.55 |
+
+  - We tried 64 gated burn configs, varying order share, steadiness, an overdue cut,
+    carryover, and window or ewma rates. None had higher precision than C at the same due-list
+    size on the tuning orders. On the holdout the best gained 0.01. A burn rule reaches C's
+    precision only when gated to groups in ≥40% of recent orders, and then it is a frequency
+    rule.
+  - Among the groups the burn model calls due, the share bought rises with C's per-order rate
+    (0.12 to 0.76) but hardly with cover. The false due rows are meal-driven or occasional
+    groups that pass a buy-count gate: burger and hotdog buns, pita, sausages, soda, pizza
+    sauce. They aren't used up steadily, so a stash model misreads their gaps.
+  - Swapping the gap ratio for stash cover (B4 against C refitted on the same rows) changes
+    nothing measurable. In gradient boosting, C's per-order rate carries the ranking: it drops
+    average precision by 0.215 when permuted, and every burn feature by 0.013 or less. B2 is
+    overconfident: of rows it put at 0.9 or more, 45% were bought.
+  - The burn quantity, enough to last one order gap, was off by 0.89 packs on hits. The median
+    of the last 3 was off by 0.61.
+  - C never put a group bought fewer than 3 times a year in due or maybe (max 0.15). About 7
+    such rows per order clear `OFFER_FLOOR` (0.1), so a once-a-year item on offer could still
+    come up as a stock-up.
+  - Decided (2026-10-04, by the user): keep the current model. A stock-up on offer now needs
+    `OFFER_MIN_BUYS` (3) orders in the last year. In the backtest, groups bought once or twice
+    a year were 7 of the 77 rows per order between 0.1 and 0.3, and 0–12% of them were
+    bought.
 
 Done when the user accepts most of the due rows and finds the maybe list relevant.
 

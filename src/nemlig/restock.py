@@ -44,14 +44,17 @@ RATE_EDGES = (0.02, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)
 RATIO_EDGES = (0.5, 0.8, 1.2, 2.0, 4.0)
 
 DUE = 0.55
-"""Added without asking. On the last 40 real orders: about 7 a time, 65% of them bought."""
+"""Added without asking. On the last 40 real orders: about 8 a time, 70% of them bought."""
 MAYBE = 0.3
-"""Offered for the user to pick, the likeliest `MAX_MAYBE` of them. About half were bought."""
+"""Offered for the user to pick, the likeliest `MAX_MAYBE` of them. About 4 in 10 were bought."""
 MAX_MAYBE = 12
 OFFER_FLOOR = 0.1
 """A group this likely joins the maybes when it is on offer at `OFFER_DISCOUNT` percent."""
 OFFER_DISCOUNT = 20
 MAX_OFFERS = 3
+OFFER_MIN_BUYS = 3
+"""Orders in the last year a group must have been in to be offered, so a steak bought once or
+twice a year isn't suggested as a stock-up."""
 
 
 # -- the model --------------------------------------------------------------------------------
@@ -165,6 +168,8 @@ class Due:
     last: date
     every: int | None
     """The usual gap in days."""
+    buys: int
+    """Orders in the last `STALE_DAYS` that had it."""
     quantity: int
     """Bought per order, the median of the last three times."""
     lines: list[OrderLine]
@@ -188,6 +193,7 @@ def predict(orders: Iterable[Order], groups: Groups, when: date) -> list[Due]:
                 category=g.category,
                 last=g.dates[-1],
                 every=None if gap is None else round(gap),
+                buys=sum((when - d).days <= STALE_DAYS for d in g.dates),
                 quantity=max(median_low(g.quantities[-3:]), 1),
                 lines=list(reversed(g.lines.values())),
             )
@@ -264,9 +270,10 @@ def propose(
     ``exclude`` (``"kød & fisk"`` or ``"koed-&-fisk"``) and products an avoid rule matches.
 
     The suggested product is the group's latest one that no avoid rule matches. The maybes are
-    the likeliest `MAX_MAYBE`. A group below them but at least `OFFER_FLOOR` likely joins them
-    when a product of it is on offer at `OFFER_DISCOUNT` percent or more, unless a keep rule
-    holds its latest product; at most `MAX_OFFERS` do.
+    the likeliest `MAX_MAYBE`. A group below them but at least `OFFER_FLOOR` likely, and bought
+    in `OFFER_MIN_BUYS` orders in the last year, joins them when a product of it is on offer at
+    `OFFER_DISCOUNT` percent or more, unless a keep rule holds its latest product; at most
+    `MAX_OFFERS` do.
     """
     prefs = prefs or Preferences()
     excluded = {fold(c) for c in exclude}
@@ -304,6 +311,7 @@ def propose(
         elif (
             offer
             and (offer.discount or 0) >= OFFER_DISCOUNT
+            and d.buys >= OFFER_MIN_BUYS
             and promoted < MAX_OFFERS
             and (offer.id == line.product_id or not prefs.kept_by(line.product_id, line.name, _brand(line)))
         ):

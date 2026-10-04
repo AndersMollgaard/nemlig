@@ -128,9 +128,16 @@ def offer(pid, name, discount, brand=None):
 
 
 def test_propose_promotes_an_unlikely_group_on_offer(monkeypatch):
-    orders = weekly()
+    once = restock.predict(weekly(), Groups(), NEXT)
+    assert by_group(once)["kaviar"].buys == 1
+    monkeypatch.setattr(restock, "OFFER_FLOOR", 0.0)
+    rare = restock.propose(once, Groups(), when=NEXT, offers=[offer("4", "Kaviar", 30)])
+    assert "4" not in [i.product_id for i in rare.maybe]
+
+    orders = weekly(extra=lambda week: [line("4", "Kaviar")] if week in (12, 19) else [])
     due = restock.predict(orders, Groups(), NEXT)
     kaviar = by_group(due)["kaviar"]
+    assert kaviar.buys == restock.OFFER_MIN_BUYS and kaviar.p < restock.MAYBE
     monkeypatch.setattr(restock, "OFFER_FLOOR", kaviar.p - 0.001)
 
     result = restock.propose(due, Groups(), when=NEXT, offers=[offer("4", "Kaviar", 30)])
