@@ -135,6 +135,11 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
   always, budget) and `[[keep]]` and `[[avoid]]` rules. A rule matches when every field it sets
   matches: `id`, `brand` (ignoring case) and part of the `name`. Start from
   `cp preferences.example.toml ~/.config/nemlig/preferences.toml`.
+- **The restock model** is a smoothed table of how often this household bought a group, by its
+  recent purchase rate and how due it is. Fancier models were tested against it on the order
+  history (logistic regression, splines, gradient boosting, isotonic regression on the rate,
+  a gap-based renewal model, a burn-rate model). None gained more than about 0.01 in average
+  precision, so the table stays.
 
 ## Agents
 
