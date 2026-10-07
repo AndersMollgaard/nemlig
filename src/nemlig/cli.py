@@ -18,7 +18,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from . import dishes, preferences, product_cache, restock
+from . import dishes, preferences, product_cache, restock, slots
 from . import groups as groups_file
 from ._env import read_env_file
 from ._version import __version__
@@ -349,6 +349,13 @@ def cmd_delivery_reserve(nc: NemligClient, a: argparse.Namespace) -> Any:
     return result
 
 
+def cmd_delivery_suggest(nc: NemligClient, a: argparse.Namespace) -> Any:
+    """Rank the bookable slots by the household's past slots, orders on their way included, and
+    the fee."""
+    orders = nc.get_all_orders()
+    return slots.suggest(orders, nc.get_delivery_days(days=a.days, start=a.start), limit=a.limit)
+
+
 def cmd_orders(nc: NemligClient, a: argparse.Namespace) -> Any:
     return nc.get_orders(limit=a.limit, page=a.page)
 
@@ -663,6 +670,17 @@ def build_parser() -> argparse.ArgumentParser:
         "reserve a delivery slot for the basket (exit 1 if not reserved)",
     )
     sp.add_argument("slot_id", type=int)
+    sp = cmd(
+        dsub,
+        "suggest",
+        cmd_delivery_suggest,
+        "the bookable slots that fit the household's past orders best, with the fee counted",
+    )
+    sp.add_argument("--days", type=int, default=7, help="number of days (default 7)")
+    sp.add_argument("--start", type=iso_date, help="first day, YYYY-MM-DD (default today)")
+    sp.add_argument(
+        "--limit", type=int, default=3, help="slots to show (default 3; one per day over several)"
+    )
 
     orders = cmd(sub, "orders", cmd_orders, "past orders, newest first; show one or reorder it")
     orders.add_argument("--limit", type=int, default=10, help="orders per page (default 10)")
@@ -999,6 +1017,11 @@ def to_text(value: Any) -> str:
         return "\n".join([*rows, _text_basket(value.basket)])
     if isinstance(value, DeliveryDay):
         return _text_day(value)
+    if isinstance(value, slots.SlotSuggestion):
+        return (
+            f"{value.id}  {value.date:%a %d/%m} {value.start_hour:02d}-{value.end_hour:02d}  "
+            f"{_kr(value.price)}  {value.reason}"
+        )
     if isinstance(value, OrderSummary):
         return _text_order(value)
     if isinstance(value, ShoppingListSummary):

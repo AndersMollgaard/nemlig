@@ -17,9 +17,11 @@ added before both.
 
 1. **Context, in one Bash call:**
    ```sh
-   nemlig --text prefs; nemlig --text basket; nemlig --text orders show
+   nemlig --text prefs; nemlig --text basket; nemlig --text orders show; nemlig --text delivery suggest
    ```
-   `orders show` with no id shows the latest order. `household` sets the portions. `diet` and
+   `orders show` with no id shows the latest order. `delivery suggest` is for step 2. Use
+   `--start YYYY-MM-DD --days 1` when the request names a day, and leave it out when it names
+   a time. `household` sets the portions. `diet` and
    `avoid` rules are hard constraints, and `budget` guides the price level. Take the number of
    nights and people from the request or `household`. Ask only if neither says.
 2. **Delivery slot, before any offers.** Offers and deals change with the delivery slot, so the
@@ -27,17 +29,19 @@ added before both.
    `delivery: tors. 01/10 kl. 16-17 (reserved, slot 2405499)` or `(not reserved, …)`.
    - `reserved`: use it and its slot id, and name it in checkpoint 1 ("offers for Thursday
      16-17").
-   - The user named a day or time in the request ("Friday evening"): find it with
+   - The user named a day and time in the request ("Friday 16-21"): find it with
      `nemlig --text delivery --available --days 1 --start YYYY-MM-DD`.
-   - Otherwise (`not reserved` means it is only the earliest free slot) **ask first**, in one
-     short question: "Which day and time is the delivery? Offers depend on it." Ask this
-     together with the number of nights or people if those are also missing, and fetch no
-     offers until it is answered. Then look up the slot as above.
+   - Otherwise (`not reserved` means it is only the earliest free slot) **choose it**:
+     `nemlig --text delivery suggest` ranks the bookable slots by the household's past slots
+     and the fee, one per day. Add `--start YYYY-MM-DD --days 1` for a day the user named. Take
+     the top row, and fetch its offers with `--slot`. In checkpoint 1, say which slot it is and
+     why ("Delivery Fri 09/10 16-21 (19 kr), your usual Friday window. Say if you want another
+     time."). If the user picks another, fetch the offers for it and show the anchors again.
 
    From then on pass `--slot SLOT_ID` to `offers` and `search`, also when it is the reserved
-   one (that costs nothing, and keeps the prices right if the hold lapses). The slot the user
-   chose here is reserved in step 8, before anything is added. Choosing it counts as asking for
-   the reservation, so the base skill's "only when asked" rule is met.
+   one (that costs nothing, and keeps the prices right if the hold lapses). The slot is
+   reserved in step 8, before anything is added. Asking for dinners to be added counts as
+   asking for the reservation, so the base skill's "only when asked" rule is met.
 3. **Dinner offers, in one call:**
    ```sh
    nemlig --text offers --category koed fisk-og-skaldyr groentsager faerdigretter-og-koederstatning --min-discount 20 --limit 0 --slot SLOT_ID
@@ -160,8 +164,7 @@ added before both.
 
 If the user says "just pick", "surprise me" or similar, skip both checkpoints. Choose the
 anchors and the N dishes yourself, then reserve and add as in step 8, and report the dishes
-with the additions. The delivery slot question (step 2) is still asked when no slot is
-reserved or named.
+and the slot with the additions.
 
 When the user corrects you in a way that will hold ("we don't eat lamb", "never that
 brand"), record it as the base skill says: food rules in `diet`, products with `prefs avoid`.
@@ -170,7 +173,7 @@ brand"), record it as the base skill says: food rules in `diet`, products with `
 
 Run the flow with both checkpoints, as alone. The orchestrator has read `prefs`, the basket,
 the latest order and the offers, settled and reserved the slot, and gives its id, the nights
-and the people. So skip *Context*, the *Delivery slot* question and the offers call, and start
+and the people. So skip *Context*, *Delivery slot* and the offers call, and start
 at *Checkpoint 1*. The orchestrator puts the step-6 search in a call with its own reads. In
 *Reserve the slot, then add*, skip the reservation, and run `dishes add` in the orchestrator's
 call. Don't report or offer the recipes (the orchestrator starts them). Hand back the base

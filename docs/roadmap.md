@@ -429,7 +429,31 @@ time per run, not counting the user's replies, over ~20 model turns.
   - A shopping list as a bulk add was slower (0.95 s per list item plus 5.3 s), and its
     updates lose writes in parallel.
   - Findings are in `docs/nemlig-api.md`.
-- [ ] **Live run.** Time one fill-basket run from its transcript against the baseline.
+- [x] **Live run** (2026-10-07, "delivery friday, two dinners").
+  - 161 s of agent time over ~12 turns, against ~190 s for the three baseline runs (with 3–4
+    dinners).
+  - Up to checkpoint 1 took 48 s (was 62–71 s), and the report 31 s (was 56–63 s).
+  - Checkpoint 2 took 82 s (was 55–73 s). Writing the `dishes` spec and then copying the
+    tables generates the table content twice.
+  - The parallel `Skill` loads and the `dishes` heredoc ran without permission prompts.
+- [x] **Propose a slot** (asked by the user after the live run, which listed every Friday slot).
+  - `nemlig delivery suggest` ranks the bookable slots and gives the household's top pick
+    with how alike recent orders were (`src/nemlig/slots.py`). A past order votes by window
+    overlap, with an 8-order half-life, and orders on the slot's weekday count 10 times. Over
+    several days a day's share of orders weighs in, and each kroner of fee costs 0.01.
+  - It reads the order summaries, not the cache, so orders on their way count. This week's
+    Friday 16-21 order made Friday's top pick 16-21 at 19 kr instead of the old 16-19 at
+    26 kr.
+  - Backtest with the day given: the top window overlapped the chosen one by half or more for
+    72% of the last 40 orders (51% of the last 106). Same-weekday weights of 1, 3 and 10 gave
+    55%, 60% and 72% on the last 40. The weekday alone was right 28% of the time.
+  - Decided (by the user): when the user names no slot, the skill takes the top
+    `suggest` row, reserves it, and says so in the first line of checkpoint 1 ("your usual
+    Friday window, say if you want another time"). That removes the slot question. About 3
+    in 10 times the user will want another slot, and then the skill reserves that one and
+    shows the anchors again if the offers changed. Asking for the basket to be filled counts
+    as asking for the reservation. The run asks only for the number of nights, when it is
+    missing.
 
 ## In every phase
 

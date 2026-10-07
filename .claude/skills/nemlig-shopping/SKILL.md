@@ -140,8 +140,9 @@ In order of priority:
 - To correct a quantity, use `set`. It is absolute, so it is safe to repeat.
 - Product ids are strings of digits, taken from search, basket or order output. Never guess one.
 - Don't run `basket clear --yes`, `lists delete --yes` or `delivery reserve` unless the user
-  asked for it in this conversation. Choosing a delivery slot for `nemlig-dinners` or
-  `nemlig-fill-basket` counts as asking for it to be reserved. Clearing the basket keeps the reserved delivery slot.
+  asked for it in this conversation. Asking `nemlig-dinners` or `nemlig-fill-basket` to fill
+  the basket counts as asking for its slot to be reserved, whether the user named the slot or
+  the skill chose it. Clearing the basket keeps the reserved delivery slot.
 
 ## Reserving a delivery slot
 
@@ -219,6 +220,7 @@ nemlig --text dishes add 1a 2b                      # add the picked dishes of t
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)
 nemlig --text delivery --available --days 3         # bookable slots: SLOT_ID time price
+nemlig --text delivery suggest                      # the slots that fit the household's habits and fees best
 nemlig --text delivery reserve SLOT_ID              # only when asked (see Reserving a delivery slot)
 nemlig --help                                       # everything else
 ```

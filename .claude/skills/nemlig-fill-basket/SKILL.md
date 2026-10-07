@@ -23,36 +23,54 @@ Bash call as the write before them (`basket add …; search …`).
    the same message. Their rules apply here and are not repeated. The context call:
    - When the request names no delivery day:
      ```sh
-     nemlig --text prefs; nemlig --text basket; nemlig --text orders show; nemlig --text restock --exclude "kød & fisk"; nemlig --text offers --category koed fisk-og-skaldyr groentsager faerdigretter-og-koederstatning --min-discount 20 --limit 0
+     nemlig --text prefs; nemlig --text basket; nemlig --text orders show; nemlig --text restock --exclude "kød & fisk"; nemlig --text offers --category koed fisk-og-skaldyr groentsager faerdigretter-og-koederstatning --min-discount 20 --limit 0; nemlig --text delivery suggest
      ```
      Restock and offers are for the basket's slot. When it is `(reserved)`, they are the
-     run's, and step 2 is skipped unless nights or people are missing.
-   - When it names a day:
+     run's, and step 2 needs no call.
+   - When it names a day but no time:
      ```sh
-     nemlig --text prefs; nemlig --text basket; nemlig --text orders show; nemlig --text delivery --available --days 1 --start YYYY-MM-DD
+     nemlig --text prefs; nemlig --text basket; nemlig --text orders show; nemlig --text delivery suggest --start YYYY-MM-DD --days 1
      ```
+   - When it names a day and a time, use
+     `nemlig --text delivery --available --days 1 --start YYYY-MM-DD` in place of `suggest`.
 
    This is the run's only `prefs` read, and `orders show` is the latest order the dinners
    count as at home. Fresh meat and fish are left out of restock, because they are the dinners'
    job.
-2. **Slot and nights: one question, then reserve.**
-   - Slot: the one the user named, or the basket's `(reserved)` slot. `(not reserved)` is only
-     the earliest free slot, so it doesn't count.
-   - Nights and people: from the request, or `household`.
+2. **Slot: decide, reserve, and say so.** Don't ask for the slot. Choose it in this order:
+   1. The day and time the user named.
+   2. The basket's `(reserved)` slot. `(not reserved)` is only the earliest free slot, so it
+      doesn't count.
+   3. The top row of `delivery suggest`. It ranks the bookable slots by the household's past
+      slots and the fee, over the next 7 days (one row per day) or on the day the user named:
+      ```
+      2409265  Fri 09/10 16-21  19.00 kr  like 10 of the last 10 Fri orders, 7 of the last 10
+      ```
 
-   Ask once, in one short message, for whatever is missing ("Which day and time is the
-   delivery, and how many dinners?"). Add nothing before it is answered. If the user names a
-   day, find it with `nemlig --text delivery --available --days 1 --start YYYY-MM-DD`.
-
-   When the slot isn't the basket's reserved one, reserve it and read restock and the offers
-   for it in one call. Choosing the slot counts as asking for the reservation:
+   Asking for the basket to be filled counts as asking for the reservation. When the slot
+   isn't the basket's reserved one, reserve it and read restock and the offers for it in one
+   call:
    ```sh
    nemlig --text delivery reserve SLOT_ID && nemlig --text restock --exclude "kød & fisk" --slot SLOT_ID && nemlig --text offers --category koed fisk-og-skaldyr groentsager faerdigretter-og-koederstatning --min-discount 20 --limit 0 --slot SLOT_ID
    ```
-   If the reservation fails, nothing else runs. Stop there, as in the base skill's *Reserving a
-   delivery slot*. Keep the price change and the `undeliverable:` lines for the report. From
-   here on, every `restock`, `offers` and `search` gets `--slot SLOT_ID`. The basket's last
-   line gives the id (`slot 2405499`).
+   If the reservation fails, nothing else runs. Try the next `suggest` row the same way. If
+   the user named the slot, or that row fails too, stop there, as in the base skill's
+   *Reserving a delivery slot*. Keep the price change and the `undeliverable:` lines for the
+   report. From here on, every `restock`, `offers` and `search` gets `--slot SLOT_ID`. The
+   basket's last line gives the id (`slot 2405499`).
+
+   Tell the user the slot you chose in the first line of checkpoint 1, and why ("Delivery Fri
+   09/10 16-21 (19 kr), your usual Friday window. Say if you want another time."). Leave the
+   line out when the user named the slot.
+
+   **Nights and people** come from the request, or `household`. If the number of nights is
+   missing, ask for it in one short message, with the slot line above, after the reservation
+   call has run. Add nothing before it is answered.
+
+   **The user wants another slot** (at any point before the dinners are added): find it with
+   `nemlig --text delivery --available --days 1 --start YYYY-MM-DD`. Then rerun the reserve
+   call above with it. The basket moves to the new slot's prices, and the restock lines stay.
+   Show the anchors again if the offers changed. Mention the price change in the report.
 3. **Restock, with the first cheaper search.** If restock says `to review`, review first, as in
    `nemlig-restock`. Judge the rows as in its *Chained* section. Then make one Bash call: add the
    due rows, and search for cheaper swaps for the lines already in the basket and the due rows,
@@ -145,9 +163,9 @@ Bash call as the write before them (`basket add …; search …`).
 
 ## Rules
 
-- The run asks the user at three points only: the slot and nights (when missing), the dinners'
-  two checkpoints (the restock maybes ride along with the first), and the closing question.
-  Everything else is decided and reported.
+- The run asks the user at three points only: the number of nights (when missing), the
+  dinners' two checkpoints (the restock maybes ride along with the first), and the closing
+  question. Everything else is decided and reported, including the slot.
 - Each sub-skill gets the slot and its instructions from this skill and hands back one block.
   Only this skill reports to the user. The recipe agent is the exception. It runs on its own,
   never asks, never touches the basket, and hands back only a link.
