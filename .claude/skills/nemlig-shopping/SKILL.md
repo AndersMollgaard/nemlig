@@ -19,8 +19,11 @@ Round trips matter most. Every step below is meant to save one.
   and SOLD OUT. Use JSON only when you need fields that text leaves out: `labels` (øko,
   laktosefri, frost...), `brand`, `category`, or per-line `discount`. JSON `basket` also has
   each line's `unit_price`, `labels` and `offer`.
-- **Start with `nemlig --text basket`.** It shows what is already there and the reserved
-  delivery slot, and it logs in if the session has expired.
+- **Start with `nemlig --text basket`.** It shows what is already there and the delivery slot
+  with its id, and it logs in if the session has expired.
+- **Load skills and read in the same message.** `Skill` calls and the first Bash call run in
+  parallel. Chain the reads of one step into one Bash call with `;`, and put a read in the same
+  call as the write before it (`basket add …; search …`).
 - **Offers and deals depend on the delivery slot.** Search and offers use the basket's slot
   (the earliest one if none is reserved). If the user plans another day, add `--slot SLOT_ID`
   (from `delivery`) to `search` and `offers` rather than reserving it.
@@ -33,7 +36,9 @@ Round trips matter most. Every step below is meant to save one.
   Quote queries that have more than one word. Use `--limit 5` (the default is 10). Only page
   with `--offset` if nothing fits.
 - **Change the basket in one call.** `nemlig --text basket add 701013:2 5003310 5035265` applies
-  all the items and prints the resulting basket. Don't run `basket` again afterwards.
+  all the items and prints `added: 3 lines, 61.85 kr` and the resulting basket. Don't run
+  `basket` again afterwards. The items go one at a time (~0.6 s each), because nemlig handles
+  one basket request per session at a time.
 - **Don't run `status`, `product` or `--help` just in case.** Run `product ID` only when the user
   asks about ingredients, allergens or nutrition. It is long.
 - **`favourites` is large (~16 KB of text).** Filter it:
@@ -91,7 +96,7 @@ what is due from the whole order history. For "same as last time", take the prod
 order history rather than searching:
 ```sh
 nemlig --text orders --limit 3                 # recent orders: id, date, total
-nemlig --text orders show 88876788             # lines as "QTY x NAME [PRODUCT_ID] PRICE"
+nemlig --text orders show 88876788             # lines as "QTY x NAME [PRODUCT_ID] PRICE" (no id: the latest)
 nemlig --text orders reorder 88876788          # adds the whole order (additive!)
 ```
 Use `reorder` only when the user wants the whole order again. To pick from it, read the
@@ -204,11 +209,13 @@ nemlig --text offers --limit 20                     # offers for the basket's de
 nemlig --text offers --category koed kylling --min-discount 20 --limit 0
                                                     # offers in those categories (top or sub), 20%+ off
 nemlig --text offers --categories                   # offer counts per category and sub-category
-nemlig --text search Q1 Q2 --cheaper-than ID1 ID2   # only what costs less per kg/l/stk than those basket lines
+nemlig --text search Q1 Q2 --cheaper-than ID1 ID2   # only swaps for those basket lines worth making, with the saving
 nemlig --text prefs                                 # preferences, keep and avoid rules
 nemlig --text restock --exclude "kød & fisk"        # usual items due for the basket's slot (see nemlig-restock)
 nemlig --text orders sync                           # cache all finished orders locally (restock does it too)
 nemlig --text offers --slot SLOT_ID                 # another slot's offers, without reserving it
+nemlig --text dishes                                # price a dinner plan from stdin (see nemlig-dinners)
+nemlig --text dishes add 1a 2b                      # add the picked dishes of that plan
 nemlig --text lists                                 # shopping lists; lists show ID; lists to-basket ID
 nemlig --text lists set LIST_ID ID:QTY ...          # edit a list (0 removes)
 nemlig --text delivery --available --days 3         # bookable slots: SLOT_ID time price

@@ -327,6 +327,16 @@ Probed with the account while writing `src/nemlig/`. Read-only, or reverted afte
   -91.21), and `IsPriceDiffChangePositive` was `false` for a cheaper basket. The same
   `UpdateDeliveryTime?timeslotId=` POST then reserved it (`IsReserved: true`,
   `MinutesReserved: 20`, empty diffs), and the basket moved to the new prices.
+- **Basket writes don't go faster in parallel** (tested 2026-10-07, basket restored after).
+  `AddToBasket` takes about 0.6 s per item. On a 19-line basket, 14 `addToExisting` adds
+  through 8 threads, 2 of them for lines already there, came out exact in 3 of 3 trials. So did
+  14 absolute sets. But each round took 7.5–8.8 s, the same as sending them one by one, with
+  single calls waiting up to 5 s. nemlig handles one basket request per session at a time,
+  which is typical of ASP.NET session state. The client keeps sending them in order.
+- **A shopping list is no faster bulk add** (same day). `UpdateProductInShoppingList` took
+  0.95 s per product, and `addShoppingListToBasket` took 5.3 s for 14 products. It added them
+  exactly. In parallel, list updates **lose writes**: 14 parallel updates left 2 products on the
+  list. One `RemoveShoppingList` timed out client-side but still deleted the list.
 
 ## Sources
 

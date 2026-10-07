@@ -385,6 +385,52 @@ Done when the user accepts most of the due rows and finds the maybe list relevan
 
 Done when a real dinner run ends with a recipe page that matches what went into the basket.
 
+## Phase 6: Speed
+
+Asked by the user (2026-10-07): make a fill-basket run faster without losing quality.
+
+Baseline, from three live runs' transcripts (2026-10-01 and 2026-10-03): about 190 s of agent
+time per run, not counting the user's replies, over ~20 model turns.
+- **Model output, ~110 s.** About 70% is hidden reasoning (anchors, dishes, product matching,
+  sums). The visible checkpoint tables are 450–950 tokens of 1,700–4,200.
+- **Turn overhead, ~50 s.** Eight turns did one small thing each: four `Skill` loads,
+  `orders --limit 1` then `orders show`, the JSON basket for cheaper, and a separate add for
+  the maybes.
+- **CLI, ~30 s.** Half of it is `basket add`, at ~0.65 s per item.
+
+- [x] **Fewer turns.**
+  - `nemlig-fill-basket` is laid out turn by turn: all four sub-skills load in parallel with
+    the context call, and reserve, restock and offers run in one call.
+  - When the request names no day, restock and offers are read with the context. That saves
+    a turn when the basket's slot is reserved.
+  - Every basket add carries the cheaper search for its lines, so cheaper has no pass of its
+    own.
+  - The recipe agent starts in parallel with the dinner add.
+  - The happy path drops from ~20 turns to ~10.
+- [x] **CLI for the sums, skills for the judgement.**
+  - `orders show` without an id shows the latest order.
+  - `search --cheaper-than` prints the line it compared with and, per row, the packs for
+    about the same amount and what they save. It drops savings under 2 kr or 5%, and marks
+    multi-buy stock-ups as `buy N for the offer`. That removes the JSON basket read and the
+    saving sums.
+  - `basket add` prints `added: N lines, X kr`.
+  - The `--text` basket shows the slot id.
+  - `nemlig dishes` prices the dinner plan from a short spec: extras, price per portion, the
+    ★ total, and shared packs counted once. Prices come from the products `search` and
+    `offers` printed in the last 12 hours (`product_cache.py`). `dishes add` adds the
+    picks. The model still picks the anchors, dishes, products and quantities, and still
+    prints the tables, because Bash output isn't reliably shown to the user. What the script
+    removes is the arithmetic and its errors.
+  - Decided (by the user): the checkpoints stay as they were, both of them and 3 dishes per
+    anchor.
+- [x] **Parallel basket writes: probed and dropped.**
+  - Parallel adds and sets were exact (6/6 trials) but no faster. nemlig handles one basket
+    request per session at a time.
+  - A shopping list as a bulk add was slower (0.95 s per list item plus 5.3 s), and its
+    updates lose writes in parallel.
+  - Findings are in `docs/nemlig-api.md`.
+- [ ] **Live run.** Time one fill-basket run from its transcript against the baseline.
+
 ## In every phase
 
 - Offline tests run against redacted fixtures in `docs/fixtures/`. Run live tests only when

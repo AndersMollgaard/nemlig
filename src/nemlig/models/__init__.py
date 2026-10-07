@@ -1,4 +1,4 @@
-from .basket import Basket, BasketLine, ValidationFailure
+from .basket import Added, Basket, BasketLine, ValidationFailure
 from .delivery import (
     DeliveryContext,
     DeliveryDay,
@@ -9,12 +9,14 @@ from .delivery import (
 )
 from .lists import Account, ShoppingList, ShoppingListItem, ShoppingListSummary
 from .orders import Order, OrderLine, OrderSummary
-from .product import Product, ProductDetails, SearchResult, SuggestedCategory, Suggestions
+from .product import CheaperThan, Product, ProductDetails, SearchResult, SuggestedCategory, Suggestions, Swap
 
 __all__ = [
     "Account",
+    "Added",
     "Basket",
     "BasketLine",
+    "CheaperThan",
     "DeliveryContext",
     "DeliveryDay",
     "DeliverySlot",
@@ -32,5 +34,6 @@ __all__ = [
     "SlotReservation",
     "SuggestedCategory",
     "Suggestions",
+    "Swap",
     "ValidationFailure",
 ]

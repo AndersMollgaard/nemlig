@@ -11,53 +11,53 @@ here and are not repeated.
 
 ## Flow
 
-1. **Preferences:** `nemlig --text prefs`. `always` and `diet` are hard constraints, and
-   `household` sets reasonable pack sizes. `keep` and `avoid` rules are applied by the CLI in
-   step 4.
-2. **Basket, as JSON, once:** `nemlig basket`. Each line has `unit_price`, `unit_price_label`,
-   `labels` (øko, laktosefri...), `offer` and `description` (pack size). JSON is needed here;
-   `--text` leaves these out.
-3. **Pick the lines to check.** Skip sold-out lines, lines a `keep` rule matches, and lines that are
+1. **Context, in one Bash call:** `nemlig --text prefs; nemlig --text basket`. `always` and
+   `diet` are hard constraints, and `household` sets reasonable pack sizes. `keep` and `avoid`
+   rules are applied by the CLI in step 3. The basket gives each line's id, quantity, pack size
+   and total. The search adds the line's unit price.
+2. **Pick the lines to check.** Skip sold-out lines, lines a `keep` rule matches, and lines that are
    already a budget product with nothing plainer to swap to. For each remaining line, write
    one generic Danish query that keeps what defines it: "øko minimælk", "laktosefri
    letmælk", "hakket oksekød 8-12%", "havregryn". Don't search the product name verbatim;
-   it mostly returns the same product. Tags like `Discount`, `Prisfald`, `Prismatch` and `Køl`
-   in `labels` are not constraints, and `Discount` doesn't mean a budget range.
-4. **One search**, with the basket line id of each query after the queries, in the same order:
+   it mostly returns the same product.
+3. **One search**, with the basket line id of each query after the queries, in the same order:
    ```sh
    nemlig --text search "øko minimælk" kaffebønner --limit 8 --cheaper-than 103368 5027015
    ```
-   `--cheaper-than` keeps only products that are in stock, in the line's unit (kr/kg with
-   kr/kg), and cheaper per kg, l or piece than the line, offers included. It compares
-   `kr/kg`, never the shelf price, so a bigger pack can pass while costing more in total, and
-   a multi-buy offer passes even if it needs 3 bought. Step 7 sorts that out. `kr/stk` is
-   crude: a small and a large cauliflower are both 1 stk. It also drops products an `avoid`
-   rule matches, and for a line a `keep` rule matches it prints `skipped '<query>': keep
-   rule ...` instead of searching. `0 of 38 results` means nothing is cheaper. If the user plans a delivery slot other than the basket's, add
-   `--slot SLOT_ID`. If a query finds nothing at all (`0 of 0`), retry just that one with a
-   broader term ("rugknækbrød" → "knækbrød").
-5. **Judge the candidates per line.** Keep one only if it:
+   `--cheaper-than` does the arithmetic. It keeps only products that are in stock, in the
+   line's unit (kr/kg with kr/kg), cheaper per kg, l or piece than the line, offers included,
+   and that save enough on the line. The rest is dropped:
+   ```
+   2 of 18 results for 'øko minimælk' cheaper than 2 x Minimælk øko. (1 l / Arla) 51.90 kr (25.95 kr/l)
+   5012345  Minimælk øko.  1 l / Øko  20.95 kr (20.95 kr/l)  2x saves 10.00 kr
+   5012999  Minimælk øko.  1 l / Thise  22.95 kr (22.95 kr/l)  offer: 3 for 60 kr (20.00 kr/l)  buy 3 for the offer
+   ```
+   - `2x saves 10.00 kr`: the packs that hold about the line's amount, and the line total
+     minus their cost, with a multi-buy price only when the packs reach it. `(4.5x the
+     amount)` means the packs hold much more or less than the line does.
+   - `buy 3 for the offer`: only buying the multi-buy quantity makes it cheaper.
+   - The biggest saving comes first. Savings under 2 kr or 5% are left out.
+   - `kr/stk` is crude: a small and a large cauliflower are both 1 stk.
+   - Products an `avoid` rule matches are dropped. For a line a `keep` rule matches, it prints
+     `skipped '<query>': keep rule ...` instead of searching.
+   - `0 of 38 results` means nothing is cheaper. If a query finds nothing at all (`0 of 0`),
+     retry just that one with a broader term ("rugknækbrød" → "knækbrød").
+   - If the user plans a delivery slot other than the basket's, add `--slot SLOT_ID`.
+4. **Judge the candidates per line.** Keep one only if it:
    - is the **same kind of product**: judge it. Thighs are not a whole chicken, portion
-     packs are not a 1 l carton, and a flavoured variant is not the plain one.
+     packs are not a 1 l carton, frozen is not fresh, and a flavoured variant is not the plain
+     one.
    - keeps every **constraint label** of the original (øko, laktosefri, glutenfri, fat %) and
      every preference. Read them from the name ("øko.", "laktosefri"). If a name doesn't
      settle it, run one `nemlig search Q...` without `--text` for just those queries and check
-     `labels`.
-   - has a **sensible pack size** for the household. No 5 kg sack to replace 500 g unless the
-     household would use it.
-6. **Compare unit prices, not shelf prices.**
-   - An offer shows its unit price in brackets: `offer: 3 for 50 kr (33.33 kr/kg)` is the
-     price per kg when buying 3, and `offer: 18 kr (24.00 kr/kg)` is the price now. A
-     multi-buy price counts only if the swap buys at least that many. Otherwise use the plain
-     unit price.
-   - The basket line's `unit_price` already includes a single-price offer. A multi-buy
-     `offer` on the line counts only if its quantity reaches the offer's.
-   - "Buy 2 to hit the offer" is a separate kind of proposal. Suggest it only for things that
-     keep (dry goods, frozen, household), or when the basket already has 2+.
-7. **Saving per line** = current line total − new line total for about the same amount, in
-   whole packs (2 × 500 g replaces 1 kg). Drop savings under 2 kr or under 5%, which aren't
-   worth a swap. Add up the total. If the swaps would take the basket below the minimum
-   order, say so.
+     `labels`. Tags like `Discount`, `Prisfald`, `Prismatch` and `Køl` are not constraints.
+   - has a **sensible amount** for the household. No 5 kg sack to replace 500 g unless the
+     household would use it, which a large `x the amount` flags.
+5. **Offers to stock up on.** Propose a `buy N for the offer` row only for things that keep (dry
+   goods, frozen, household), or when the basket already has N or more. Give it with the unit
+   prices, and leave it out of the total.
+6. **Total.** Add up the `saves` of the swaps you keep. If the swaps would take the basket
+   below the minimum order, say so.
 
 ## Alone: propose, then apply
 
@@ -91,8 +91,9 @@ the minimum-order line from that command's output.
 
 ## Chained: hand back
 
-Skip step 1: the orchestrator has read `prefs`. Still read the basket as JSON (step 2), since
-the text output leaves out the unit prices. Add the orchestrator's `--slot SLOT_ID` to the
-search. Don't ask or apply anything. Return the base skill's handoff block, with `Applied: none` and
-one `Proposed:` line per swap (old id → new id, quantity, saving, unit prices). Put choices
-only the user can make, such as a borderline "same kind", under `Questions:`.
+The orchestrator has read `prefs`, and it runs your searches itself. It appends one
+`search --cheaper-than` to each of its basket adds, with queries written as in step 2. At its
+report, judge every `cheaper than` block as in steps 4–6, for lines still in the basket. Don't
+ask or apply anything. Return the base skill's handoff block, with `Applied: none` and one
+`Proposed:` line per swap (old id → new id, quantity, saving, unit prices). Put choices only
+the user can make, such as a borderline "same kind", under `Questions:`.

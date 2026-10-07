@@ -17,18 +17,18 @@ added before both.
 
 1. **Context, in one Bash call:**
    ```sh
-   nemlig --text prefs; nemlig --text basket; nemlig --text orders --limit 1
+   nemlig --text prefs; nemlig --text basket; nemlig --text orders show
    ```
-   Then `orders show` the latest order in the next call, if there is one. `household` sets the
-   portions. `diet` and `avoid` rules are hard constraints, and `budget` guides the price level.
-   Take the number of nights and people from the request or `household`. Ask only if neither
-   says.
+   `orders show` with no id shows the latest order. `household` sets the portions. `diet` and
+   `avoid` rules are hard constraints, and `budget` guides the price level. Take the number of
+   nights and people from the request or `household`. Ask only if neither says.
 2. **Delivery slot, before any offers.** Offers and deals change with the delivery slot, so the
    anchors are only right for the slot the user will actually get. The basket's last line says
-   `delivery: tors. 01/10 kl. 16-17 (reserved)` or `(not reserved)`.
-   - `reserved`: use it, and name it in checkpoint 1 ("offers for Thursday 16-17").
+   `delivery: tors. 01/10 kl. 16-17 (reserved, slot 2405499)` or `(not reserved, …)`.
+   - `reserved`: use it and its slot id, and name it in checkpoint 1 ("offers for Thursday
+     16-17").
    - The user named a day or time in the request ("Friday evening"): find it with
-     `nemlig --text delivery --available --days 7` (add `--start YYYY-MM-DD` for later days).
+     `nemlig --text delivery --available --days 1 --start YYYY-MM-DD`.
    - Otherwise (`not reserved` means it is only the earliest free slot) **ask first**, in one
      short question: "Which day and time is the delivery? Offers depend on it." Ask this
      together with the number of nights or people if those are also missing, and fetch no
@@ -90,8 +90,8 @@ added before both.
    When an anchor covers 2 nights, make its options work as a pair: the second can use
    leftovers ("culotte: roast Sunday, sandwiches Monday"). Suggest a set of N dishes that
    varies across the tables, and mark it with ★.
-6. **Price them with one search.** For each dish, split the ingredients into *to buy* and
-   *assumed at home*:
+6. **Find the products with one search.** For each dish, split the ingredients into *to buy*
+   and *assumed at home*:
    - Assumed at home: salt, pepper, oil, butter, flour, sugar, dried spices, stock cubes.
    - Also assumed at home: whatever is in the basket, and things that keep that were in the
      latest order (rice, pasta, onions, garlic).
@@ -104,35 +104,40 @@ added before both.
    nemlig --text search kartofler citron "frisk timian" kokosmælk ... --limit 3 --slot SLOT_ID
    ```
    The anchor is already priced by its offer, so leave it out of the search. Pick the products
-   as the base skill says. The extras for a dish cost the sum of the whole packs it needs. When
-   dishes share a pack, count it once in the total and say so.
-7. **Checkpoint 2: dishes.** One table per anchor. The heading gives the anchor, its price and
-   how many dishes can be picked from the table (the nights it covers):
+   as the base skill says, at whole packs.
+7. **Checkpoint 2: price the dishes with `dishes`, then show them.** Write the plan as a spec
+   and let the CLI do the sums. It prices the products from the latest `search` and `offers`
+   output, so it makes no request:
+   ```sh
+   nemlig --text dishes <<'EOF'
+   portions 3
+   anchor 1 5066317:1 nights 1
+   1a* Ovnstegt kylling med citron og kartofler | 60 min | 5014541:2 2301103:1 | Danish, oven
+   1b Kylling tikka masala med ris | 35 min | 5060435:1 5016560:1 | Indian, pot; ris at home
+   1c Kyllingetacos med majs og salsa | 30 min | 5048583:1 5064869:1 | Mexican, pan
+   anchor 2 5602181:1 nights 2
+   2a* Culotte med bagte rodfrugter og bearnaise | 90 min | 5016873:1 | Weekend, oven
+   2b* Steaksandwich med rucola og syltede løg | 15 min | 5021833:1 | Leftovers from 2a
+   2c Oksekødsalat med nudler og chili | 25 min | 5070655:1 | Thai, cold; uses leftovers
+   EOF
    ```
-   **1. Hel frilandskylling, 1,5 kg, 99 kr (-34%): pick 1**
-   | # | Dish | Time | Extras to buy | Extras | Per portion | Note |
-   | --- | --- | --- | --- | --- | --- | --- |
-   | 1a ★ | Ovnstegt kylling med citron og kartofler | 60 min | kartofler 2 kg, citron, timian | 32 kr | 33 kr | Danish, oven |
-   | 1b | Kylling tikka masala med ris | 35 min | kokosmælk, hakkede tomater, ingefær | 38 kr | 34 kr | Indian, pot; ris at home |
-   | 1c | Kyllingetacos med majs og salsa | 30 min | tortillas, majs, avocado, lime | 55 kr | 39 kr | Mexican, pan |
+   - `portions`: 1 per adult and 0.5 per child.
+   - `anchor KEY ID:QTY nights N`, with the nights the anchor covers. A night without an
+     anchor offer is `anchor V nights 1 | Vegetarian`.
+   - One dish per line: code (`*` marks ★), name, time, the to-buy `ID:QTY`s (`-` for none),
+     and a note with the cuisine and method, what is assumed at home, or the leftovers it uses.
+   - A product on several dishes is one shared pack, bought once at the largest quantity. When
+     two dishes each need their own pack, put the total on one of them.
+   - `no price for ID` means that id wasn't in a `search` or `offers` output. Search for it,
+     and don't guess.
 
-   **2. Culottesteg, 1,5–1,8 kg, 280 kr (-30%): pick up to 2**
-   | # | Dish | Time | Extras to buy | Extras | Per portion | Note |
-   | --- | --- | --- | --- | --- | --- | --- |
-   | 2a ★ | Culotte med bagte rodfrugter og bearnaise | 90 min | rodfrugter, bearnaise | 45 kr | 46 kr | Weekend, oven |
-   | 2b ★ | Steaksandwich med rucola og syltede løg | 15 min | ciabatta, rucola | 35 kr | 44 kr | Leftovers from 2a |
-   | 2c | Oksekødsalat med nudler og chili | 25 min | nudler, agurk, koriander | 30 kr | 43 kr | Thai, cold; uses leftovers |
-   ```
-   - **Extras** is the cost of the to-buy items for that dish, without the anchor.
-   - **Per portion** = (anchor price ÷ dishes it covers + extras) ÷ portions.
-   - **Note** gives the cuisine and method, and says what is assumed at home or reuses leftovers.
-
-   Under the tables, give the total for the ★ set (anchors + extras), the slot, and one line
-   "Assumed at home: …". Ask once which dishes to use, by code ("1b, 2a, 2b"). Ask in the same
-   message whether anything assumed at home is missing. If the slot isn't reserved yet, say
-   that it will be reserved before the basket is filled ("I'll reserve fre. 02/10 17-18
-   first"). If the picks don't add up to N nights, or exceed what a table covers, say so
-   before adding.
+   It prints one table per anchor and the ★ set's total. Copy the tables as they are. Under
+   them, give the ★ total, the slot, and one line "Assumed at home: …". A `warning:` line means
+   the ★ set takes more dishes from an anchor than it covers. Fix the spec and run it again.
+   Ask once which dishes to use, by code ("1b, 2a, 2b"). Ask in the same message whether
+   anything assumed at home is missing. If the slot isn't reserved yet, say that it will be
+   reserved before the basket is filled ("I'll reserve fre. 02/10 17-18 first"). If the picks
+   don't add up to N nights, or exceed what a table covers, say so before adding.
 8. **Reserve the slot, then add.**
    1. If the chosen slot isn't the basket's reserved slot, reserve it first, as in the base
       skill's *Reserving a delivery slot*. If it fails, add nothing. When the user then picks
@@ -140,10 +145,15 @@ added before both.
       before adding.
 
       If a dish relied on an undeliverable line (step 6 counted basket lines as at home), add
-      a replacement from the step-6 search to this `basket add`, or search once for just those
-      items.
-   2. Run one `basket add` for the chosen dishes, with the ids and quantities from step 6.
-      Don't search again. Report as in the base skill, with one line per night (dish, cost).
+      a replacement from the step-6 search to this add as `ID:QTY`, or search once for just
+      those items.
+   2. Add the picked dishes in one call. It adds their anchors and extras, each product once,
+      plus any `ID:QTY` given:
+      ```sh
+      nemlig --text dishes add 1b 2a 2b
+      ```
+      Don't search again. It prints one line per dish (code, name, cost, ids), the `added:`
+      total and the basket. Report as in the base skill, with one line per night (dish, cost).
       Take the basket total, the minimum-order line and the slot from that output. The slot
       should now read `(reserved)`. End the report with one line, "Want the recipes as a
       page?", and load `nemlig-recipes` on a yes.
@@ -158,11 +168,12 @@ brand"), record it as the base skill says: food rules in `diet`, products with `
 
 ## Chained: hand back
 
-Run the flow with both checkpoints, as alone. The orchestrator has read `prefs` and the
-basket, settled and reserved the slot, and gives its id, the nights and the people. So in
-*Context* run only `nemlig --text orders --limit 1` (then `orders show`), skip the *Delivery
-slot* question, and in *Reserve the slot, then add* skip the reservation: run the one
-`basket add`, and don't report or offer the recipes (the orchestrator starts them). Hand back
-the base skill's block: one `Applied:` line per night with the dish, its cost and the product
-ids added (`Fri: Ovnstegt kylling med citron, 131 kr: 5066317:1 2301103:2`). Under
-`Questions:`, list the assumed-at-home items worth checking.
+Run the flow with both checkpoints, as alone. The orchestrator has read `prefs`, the basket,
+the latest order and the offers, settled and reserved the slot, and gives its id, the nights
+and the people. So skip *Context*, the *Delivery slot* question and the offers call, and start
+at *Checkpoint 1*. The orchestrator puts the step-6 search in a call with its own reads. In
+*Reserve the slot, then add*, skip the reservation, and run `dishes add` in the orchestrator's
+call. Don't report or offer the recipes (the orchestrator starts them). Hand back the base
+skill's block: one `Applied:` line per night with the dish, its cost and the product ids from
+the `dishes add` output (`Fri: Ovnstegt kylling med citron, 131 kr: 5066317:1 2301103:2`).
+Under `Questions:`, list the assumed-at-home items worth checking.

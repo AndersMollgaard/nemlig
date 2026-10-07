@@ -13,6 +13,19 @@ def _available(availability: dict[str, Any] | None) -> bool:
     return bool(a.get("IsDeliveryAvailable", True) and a.get("IsAvailableInStock", True))
 
 
+class Swap(Model):
+    """What replacing a basket line with a product would save. Set by the CLI, not the API."""
+
+    quantity: int
+    """Packs that hold about the line's amount."""
+    saving: float | None
+    """The line's total minus the cost of ``quantity`` packs, offers included."""
+    amount: float
+    """``quantity`` packs as a share of the line's amount: 1 is the same amount."""
+    offer_quantity: int | None = None
+    """Set when only buying this many for the multi-buy offer makes it cheaper."""
+
+
 class Product(Model):
     id: str
     name: str
@@ -40,9 +53,28 @@ class Product(Model):
     avoided: bool | None = None
     """True when an ``avoid`` rule in the household's preferences matches. Set by the CLI, not
     the API."""
+    swap: Swap | None = None
+    """Set by ``search --cheaper-than``."""
     slug: str | None = None
     """Path of the product page on www.nemlig.com, usable with ``get_product``."""
     image: str | None = None
+
+    def deal(self) -> tuple[int, float] | None:
+        """The offer as (count, price), for ``3 for 50 kr`` or a single-price ``16,95 kr``."""
+        m = _DEAL.match(self.offer or "")
+        return (int(m[1] or 1), float(m[2].replace(",", "."))) if m else None
+
+    def cost(self, quantity: int) -> float | None:
+        """What ``quantity`` packs cost, with a multi-buy price for every full set of the deal."""
+        if self.price is None:
+            return None
+        deal = self.deal()
+        if deal is None:
+            return round(quantity * self.price, 2)
+        count, price = deal
+        if count == 1:
+            return round(quantity * min(price, self.price), 2)
+        return round(quantity // count * price + quantity % count * self.price, 2)
 
     @classmethod
     def from_api(cls, d: dict[str, Any]) -> Product:
@@ -93,6 +125,10 @@ class Product(Model):
             slug=str(d["id"]),
             image=(d.get("image") or {}).get("source"),
         )
+
+
+# The offer text `_deal_text` writes.
+_DEAL = re.compile(r"(?:(\d+) for )?(\d+(?:,\d+)?) kr$")
 
 
 def _deal_text(count: int, price: float) -> str:
@@ -155,6 +191,18 @@ def _pascal_fields(d: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+class CheaperThan(Model):
+    """The basket line a ``search --cheaper-than`` query was compared with."""
+
+    product_id: str
+    name: str
+    description: str | None = None
+    quantity: int
+    total: float | None
+    unit_price: float | None = None
+    unit_price_label: str | None = None
+
+
 class SearchResult(Model):
     query: str
     total: int
@@ -162,6 +210,8 @@ class SearchResult(Model):
     products: list[Product]
     skipped: str | None = None
     """Why the search was not run, e.g. a keep rule in the preferences."""
+    than: CheaperThan | None = None
+    """The basket line the products were filtered against, with ``--cheaper-than``."""
 
     @classmethod
     def from_api(cls, d: dict[str, Any], query: str) -> SearchResult:

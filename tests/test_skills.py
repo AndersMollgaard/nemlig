@@ -28,12 +28,13 @@ def _commands(path: Path):
             fenced = not fenced
             continue
         if fenced:
-            parts = re.split(r";|\s#\s", line)[0:1] + line.split(";")[1:]
-            candidates = [p.split("  #")[0] for p in parts]
+            candidates = [line.split("  #")[0].split(" # ")[0]]
         else:
             candidates = _INLINE.findall(line)
+        # A chain such as `prefs; basket` or `reserve ID && restock` is one command per part.
+        candidates = [part for c in candidates for part in re.split(r";|&&", c)]
         for c in candidates:
-            c = c.split("|")[0].replace("...", "").strip().removeprefix("uv run ")
+            c = c.split("|")[0].split("<<")[0].replace("...", "").strip().removeprefix("uv run ")
             # Syntax summaries (ID[:QTY], <query>) are not commands.
             if c.startswith("nemlig ") and not any(s in c for s in ("[", "<")):
                 yield n, c

@@ -88,13 +88,11 @@ it. The prediction fades as orders without it come in.
 
 ## Chained: hand back
 
-The orchestrator gives the slot and the categories to leave out, and has read `prefs` already:
-```sh
-nemlig --text restock --exclude "kød & fisk" --slot SLOT_ID
-```
-Review new products as in step 2. Don't ask. Judge the list as in step 3, add the due rows in
-one `basket add`, and hand back the base skill's block. Name any merges under `Applied:`, since
-they change later predictions:
+The orchestrator runs restock in its own reads, with the slot and `--exclude "kød & fisk"`, and
+has read `prefs` already. Review new products as in step 2, without asking. Judge the list as
+in step 3. The orchestrator adds the due rows in one `basket add`, in the same call as its
+cheaper search. Hand back the base skill's block. Name any merges under `Applied:`, since they
+change later predictions:
 
 ```
 Applied:

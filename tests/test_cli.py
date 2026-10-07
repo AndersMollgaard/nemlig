@@ -95,25 +95,46 @@ def _search_with(*products):
 
 
 def test_search_cheaper_than_a_basket_line(api, customer, capsys):
-    # The basket's havregryn [5034594] costs 7.95 kr/kg (sent as "kr./Kg.").
+    # The basket's havregryn [5034594] is 2 x 1 kg at 7.95 kr/kg (sent as "kr./Kg."), 15.90 kr.
     api.get(f"{WWW}/webapi/basket/GetBasket").respond(json=fixture("basket.json"))
-    offer = {"CampaignPrice": 14.0, "MinQuantity": 2}
     search = api.get(f"{GW}/searchgateway/api/search").respond(
         json=_search_with(
-            {"Id": "1", "Price": 6.0, "UnitPriceCalc": 6.0},  # cheaper
-            {"Id": "2", "Price": 10.0, "UnitPriceCalc": 10.0, "Campaign": offer},  # 7.00 kr/kg for 2
+            {"Id": "1", "Price": 6.0, "UnitPriceCalc": 6.0},  # 2 x 1 kg saves 3.90
+            {
+                "Id": "2",
+                "Price": 10.0,
+                "UnitPriceCalc": 10.0,
+                "Campaign": {"CampaignPrice": 11.0, "MinQuantity": 2},
+            },
             {"Id": "3", "Price": 5.0, "UnitPriceCalc": 5.0, "Availability": {"IsAvailableInStock": False}},
             {"Id": "4", "Price": 1.0, "UnitPriceCalc": 1.0, "UnitPriceLabel": "kr/stk"},
+            {"Id": "5", "Price": 7.6, "UnitPriceCalc": 7.6},  # saves 0.70: not worth a swap
+            {"Id": "6", "Price": 25.0, "UnitPriceCalc": 5.0},  # 5 kg: cheaper per kg, dearer in total
+            {
+                "Id": "7",
+                "Price": 10.0,
+                "UnitPriceCalc": 10.0,
+                "Campaign": {"CampaignPrice": 18.0, "MinQuantity": 3},
+            },
+            {"Id": "8", "Price": 3.0, "UnitPriceCalc": 6.0},  # 500 g: 4 packs save 3.90
         )
     )
     code, out, _ = run(capsys, "search", "havregryn", "--cheaper-than", "5034594")
     assert code == 0 and search.call_count == 1
-    products = json.loads(out)["products"]
-    assert [p["id"] for p in products] == ["1", "2"]
-    assert products[1]["offer_unit_price"] == 7.0
+    result = json.loads(out)
+    products = {p["id"]: p for p in result["products"]}
+    assert list(products) == ["2", "1", "8", "7"]  # biggest saving first, stock-up offers last
+    assert products["2"]["offer_unit_price"] == 5.5
+    assert products["2"]["swap"] == {"quantity": 2, "saving": 4.9, "amount": 1.0}
+    assert products["8"]["swap"]["quantity"] == 4
+    assert products["7"]["swap"]["offer_quantity"] == 3
+    assert result["than"]["unit_price"] == 7.95
 
     code, out, _ = run(capsys, "--text", "search", "havregryn", "--cheaper-than", "5034594")
-    assert "offer: 2 for 14 kr (7.00 kr/kg)" in out
+    head, *rows = out.splitlines()
+    assert head.endswith("cheaper than 2 x Havregryn (finvalsede) (1 kg / Go' Morgen) 15.90 kr (7.95 kr/kg)")
+    assert rows[0].endswith("offer: 2 for 11 kr (5.50 kr/kg)  2x saves 4.90 kr")
+    assert rows[-1].endswith("buy 3 for the offer")
 
 
 def _write_prefs(tmp_path, text):
@@ -129,7 +150,7 @@ def test_search_cheaper_than_applies_keep_and_avoid_rules(api, customer, capsys,
     search = api.get(f"{GW}/searchgateway/api/search").respond(
         json=_search_with(
             {"Id": "1", "Price": 6.0, "UnitPriceCalc": 6.0, "Brand": "Cheapo"},
-            {"Id": "2", "Price": 7.0, "UnitPriceCalc": 7.0},
+            {"Id": "2", "Price": 6.5, "UnitPriceCalc": 6.5},
         )
     )
     argv = ["search", "popcorn", "havregryn", "--cheaper-than", "5036764", "5034594"]
@@ -217,6 +238,13 @@ def test_basket_add_several_items(api, customer, add_route, capsys):
     assert [line["product_id"] for line in basket["lines"]] == ["5036764", "5034594"]
     assert basket["lines"][0]["unit_price_label"] == "kr/kg"
     assert "delivery_context" not in basket
+
+
+def test_basket_add_text_says_what_was_added(api, customer, add_route, capsys):
+    # The fixture basket has 2 x havregryn for 15.90 kr, so adding 1 accounts for 7.95 kr.
+    code, out, _ = run(capsys, "--text", "basket", "add", "5034594", "999")
+    assert code == 0
+    assert out.splitlines()[0] == "added: 2 lines, 7.95 kr"
 
 
 def test_basket_set_zero_removes(api, customer, add_route, capsys):
@@ -386,6 +414,16 @@ def test_orders_sync(api, customer, capsys, tmp_path):
     head, path = out.splitlines()
     assert head == "2 of 2 orders cached (2 new, 0 not finished), 2026-09-11 to 2026-09-21"
     assert path.startswith(str(tmp_path / "cache" / "nemlig" / "orders"))
+
+
+def test_orders_show_defaults_to_the_latest(api, customer, capsys):
+    api.get(f"{WWW}/webapi/order/GetBasicOrderHistory").respond(json=fixture("order_history.json"))
+    latest = api.get(f"{WWW}/webapi/v2/order/GetOrderHistory/10000001").respond(
+        json=fixture("order_lines.json")
+    )
+    code, out, _ = run(capsys, "--text", "orders", "show")
+    assert code == 0 and latest.call_count == 1
+    assert out.startswith("10000001  2026-09-21 10:00")
 
 
 @pytest.fixture

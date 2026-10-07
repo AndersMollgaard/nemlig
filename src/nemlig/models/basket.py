@@ -73,6 +73,13 @@ class BasketLine(Model):
         )
 
 
+class Added(Model):
+    """What a ``basket add`` put in: its lines, and their share of the line totals."""
+
+    lines: int
+    total: float
+
+
 class Basket(Model):
     lines: list[BasketLine]
     number_of_products: int
@@ -88,6 +95,8 @@ class Basket(Model):
     delivery_slot: ReservedSlot | None = None
     validation_failures: list[ValidationFailure] = []
     delivery_context: DeliveryContext | None = None
+    added: Added | None = None
+    """Set by the CLI after ``basket add``."""
 
     def quantity_of(self, product_id: str | int) -> int:
         pid = str(product_id)

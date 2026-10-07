@@ -18,15 +18,17 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from . import dishes, preferences, product_cache, restock
 from . import groups as groups_file
-from . import preferences, restock
 from ._env import read_env_file
 from ._version import __version__
 from .client import SLOT_LOOKUP_DAYS, NemligClient
 from .errors import ApiError, AuthError, NemligError, NotLoggedInError
 from .models import (
+    Added,
     Basket,
     BasketLine,
+    CheaperThan,
     DeliveryDay,
     Order,
     OrderSummary,
@@ -37,6 +39,7 @@ from .models import (
     ShoppingListSummary,
     SlotReservation,
     Suggestions,
+    Swap,
 )
 from .models._base import fold
 from .order_cache import OrderCache, SyncResult
@@ -169,10 +172,60 @@ def _basket_lines(nc: NemligClient, ids: Sequence[str], queries: Sequence[str]) 
     return [lines[pid] for pid in ids]
 
 
+# A swap must save at least this much on the line, in kroner and as a share of its total.
+MIN_SAVING = 2.0
+MIN_SAVING_SHARE = 0.05
+
+
+def _pack_amount(price: float | None, unit_price: float | None) -> float | None:
+    """One pack in the unit of its unit price (kg, l or stk)."""
+    return price / unit_price if price and unit_price else None
+
+
+def _swap(p: Product, line: BasketLine) -> Swap | None:
+    """What buying ``p`` for about the line's amount saves, or None if it isn't worth a swap.
+
+    A multi-buy offer that needs more packs than that is kept as a stock-up suggestion when its
+    unit price is clearly lower."""
+    line_pack = _pack_amount(line.item_price, line.unit_price)
+    pack = _pack_amount(p.price, p.unit_price)
+    if line.total is None or not line_pack or not pack or not line.quantity:
+        return None
+    amount = line.quantity * line_pack
+    packs = max(1, round(amount / pack))
+    cost = p.cost(packs)
+    saving = None if cost is None else round(line.total - cost, 2)
+    swap = Swap(quantity=packs, saving=saving, amount=round(packs * pack / amount, 2))
+    if saving is not None and saving >= max(MIN_SAVING, MIN_SAVING_SHARE * line.total):
+        return swap
+    deal = p.deal()
+    if (
+        deal
+        and deal[0] > packs
+        and p.offer_unit_price is not None
+        and line.unit_price
+        and p.offer_unit_price <= (1 - MIN_SAVING_SHARE) * line.unit_price
+    ):
+        return swap.model_copy(update={"offer_quantity": deal[0]})
+    return None
+
+
+def _than(line: BasketLine) -> CheaperThan:
+    return CheaperThan(
+        product_id=line.product_id,
+        name=line.name,
+        description=line.description,
+        quantity=line.quantity,
+        total=line.total,
+        unit_price=line.unit_price,
+        unit_price_label=line.unit_price_label,
+    )
+
+
 def _cheaper(result: SearchResult, line: BasketLine, prefs: Preferences) -> SearchResult:
     """Only in-stock products in the line's unit (kr/kg, kr/l, kr/stk) that cost less per kg, l or
-    piece, offers included, and that no avoid rule matches. Shelf prices are not compared, so a
-    bigger pack can cost more in total."""
+    piece, offers included, that no avoid rule matches, and that save enough on the line for about
+    the same amount (see `_swap`). The biggest saving comes first."""
     if line.unit_price is None:
         return result
 
@@ -180,17 +233,20 @@ def _cheaper(result: SearchResult, line: BasketLine, prefs: Preferences) -> Sear
         prices = [x for x in (p.unit_price, p.offer_unit_price) if x is not None]
         return min(prices) if prices else None
 
-    keep = [
-        p
-        for p in result.products
-        if p.available
-        and p.id != line.product_id
-        and p.unit_price_label == line.unit_price_label
-        and (unit := best(p)) is not None
-        and unit < line.unit_price
-        and not prefs.avoided(p.id, p.name, p.brand)
-    ]
-    return result.model_copy(update={"products": keep})
+    keep = []
+    for p in result.products:
+        if (
+            p.available
+            and p.id != line.product_id
+            and p.unit_price_label == line.unit_price_label
+            and (unit := best(p)) is not None
+            and unit < line.unit_price
+            and not prefs.avoided(p.id, p.name, p.brand)
+            and (swap := _swap(p, line)) is not None
+        ):
+            keep.append(p.model_copy(update={"swap": swap}))
+    keep.sort(key=lambda p: (p.swap.offer_quantity is not None, -(p.swap.saving or 0)))
+    return result.model_copy(update={"products": keep, "than": _than(line)})
 
 
 def _search_cheaper(nc: NemligClient, a: argparse.Namespace) -> list[SearchResult]:
@@ -224,6 +280,7 @@ def cmd_search(nc: NemligClient, a: argparse.Namespace) -> Any:
             r.model_copy(update={"products": _mark_avoided(r.products, prefs)})
             for r in nc.search_many(a.queries, limit=a.limit, offset=a.offset, slot_id=a.slot)
         ]
+    product_cache.save(p for r in results for p in r.products)
     return results[0] if len(results) == 1 else results
 
 
@@ -239,8 +296,20 @@ def cmd_basket_show(nc: NemligClient, a: argparse.Namespace) -> Any:
     return nc.get_basket()
 
 
+def _added(basket: Basket, items: Sequence[tuple[str, int]]) -> Basket:
+    """The basket, with the added quantities' share of their lines' totals."""
+    lines = {line.product_id: line for line in basket.lines}
+    total = 0.0
+    for pid, qty in items:
+        line = lines.get(pid)
+        if line and line.quantity and line.total:
+            total += line.total * min(qty, line.quantity) / line.quantity
+    added = Added(lines=len({pid for pid, _ in items}), total=round(total, 2))
+    return basket.model_copy(update={"added": added})
+
+
 def cmd_basket_add(nc: NemligClient, a: argparse.Namespace) -> Any:
-    return _each(a.items, nc.add_to_basket)
+    return _added(_each(a.items, nc.add_to_basket), a.items)
 
 
 def cmd_basket_set(nc: NemligClient, a: argparse.Namespace) -> Any:
@@ -285,7 +354,12 @@ def cmd_orders(nc: NemligClient, a: argparse.Namespace) -> Any:
 
 
 def cmd_orders_show(nc: NemligClient, a: argparse.Namespace) -> Any:
-    return nc.get_order(a.order_id)
+    if a.order_id is not None:
+        return nc.get_order(a.order_id)
+    latest = nc.get_orders(limit=1)
+    if not latest:
+        raise UsageError("the account has no orders")
+    return nc.get_order(latest[0].id)
 
 
 def cmd_orders_reorder(nc: NemligClient, a: argparse.Namespace) -> Any:
@@ -335,6 +409,7 @@ def cmd_offers(nc: NemligClient, a: argparse.Namespace) -> Any:
     if a.categories:
         return _category_counts(offers)
     offers = offers[: a.limit] if a.limit else offers
+    product_cache.save(offers)
     return _mark_avoided(offers, preferences.load(preferences.default_prefs_file()))
 
 
@@ -391,6 +466,37 @@ def cmd_prefs_add(nc: NemligClient, a: argparse.Namespace) -> Any:
     rule = Rule(id=a.id, brand=a.brand, name=a.name, note=a.note)
     preferences.add_rule(preferences.default_prefs_file(), a.kind, rule)
     return _prefs_view(a)
+
+
+def _dishes_spec_file() -> Path:
+    return product_cache.default_file().with_name("dishes.txt")
+
+
+def cmd_dishes(nc: NemligClient, a: argparse.Namespace) -> Any:
+    spec = sys.stdin.read()
+    priced = dishes.render(dishes.parse(spec), product_cache.load())
+    path = _dishes_spec_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(spec, encoding="utf-8")
+    return priced
+
+
+class DishesAdded(BaseModel):
+    dishes: list[dishes.DishCost]
+    basket: Basket
+
+
+def cmd_dishes_add(nc: NemligClient, a: argparse.Namespace) -> Any:
+    try:
+        spec = _dishes_spec_file().read_text(encoding="utf-8")
+    except OSError:
+        raise UsageError("no priced plan yet: run `nemlig dishes` with the spec first") from None
+    codes = [c for c in a.picks if ":" not in c]
+    extra = [add_item(c) for c in a.picks if ":" in c]
+    items, costs = dishes.picks(dishes.parse(spec), codes, product_cache.load())
+    for pid, qty in extra:
+        items.append((pid, qty))
+    return DishesAdded(dishes=costs, basket=_added(_each(items, nc.add_to_basket), items))
 
 
 def _cached_orders(nc: NemligClient) -> list[Order]:
@@ -562,8 +668,8 @@ def build_parser() -> argparse.ArgumentParser:
     orders.add_argument("--limit", type=int, default=10, help="orders per page (default 10)")
     orders.add_argument("--page", type=int, default=1, help="1-based page")
     osub = orders.add_subparsers(metavar="ACTION")
-    sp = cmd(osub, "show", cmd_orders_show, "one order with its product lines")
-    sp.add_argument("order_id", type=int)
+    sp = cmd(osub, "show", cmd_orders_show, "one order with its product lines (default: the latest)")
+    sp.add_argument("order_id", type=int, nargs="?")
     sp = cmd(osub, "reorder", cmd_orders_reorder, "add every product of a past order to the basket")
     sp.add_argument("order_id", type=int)
     cmd(osub, "sync", cmd_orders_sync, "cache every finished order's lines locally (~/.cache/nemlig/orders)")
@@ -593,6 +699,21 @@ def build_parser() -> argparse.ArgumentParser:
     sp = cmd(rsub, "backtest", cmd_restock_backtest, "score the predictions on the last cached orders")
     sp.add_argument("--last", type=int, default=30, help="orders to predict (default 30)")
     sp.add_argument("--exclude", nargs="+", metavar="CATEGORY", help=exclude_help)
+
+    sp = cmd(
+        sub,
+        "dishes",
+        cmd_dishes,
+        "price a dinner plan read from stdin (see nemlig-dinners): the dish tables and the ★ total",
+    )
+    dish_sub = sp.add_subparsers(metavar="ACTION")
+    sp = cmd(
+        dish_sub,
+        "add",
+        cmd_dishes_add,
+        "add the picked dishes of the last priced plan (anchors and extras, shared packs once)",
+    )
+    sp.add_argument("picks", nargs="+", metavar="CODE_OR_ID:QTY", help="dish codes, and extra ID:QTY items")
 
     sp = cmd(sub, "offers", cmd_offers, "offers for the delivery slot")
     sp.add_argument("--limit", type=int, default=20, help="max products, filtered (default 20, 0 for all)")
@@ -705,7 +826,26 @@ def _product_row(p: Product) -> str:
         parts.append("SOLD OUT")
     if p.avoided:
         parts.append("AVOID")
+    if p.swap:
+        parts.append(_swap_text(p.swap))
     return "  ".join(parts)
+
+
+def _swap_text(s: Swap) -> str:
+    if s.offer_quantity:
+        return f"buy {s.offer_quantity} for the offer"
+    text = f"{s.quantity}x saves {_kr(s.saving)}"
+    if abs(s.amount - 1) > 0.2:
+        text += f" ({s.amount:g}x the amount)"
+    return text
+
+
+def _than_text(t: CheaperThan) -> str:
+    text = f"{t.quantity} x {t.name}" + (f" ({t.description})" if t.description else "")
+    text += f" {_kr(t.total)}"
+    if t.unit_price is not None and t.unit_price_label:
+        text += f" ({t.unit_price:.2f} {t.unit_price_label})"
+    return text
 
 
 def _text_details(p: ProductDetails) -> str:
@@ -724,13 +864,16 @@ def _text_details(p: ProductDetails) -> str:
 
 
 def _text_basket(b: Basket) -> str:
-    lines = [
+    head = []
+    if b.added:
+        head.append(f"added: {b.added.lines} line{'' if b.added.lines == 1 else 's'}, {_kr(b.added.total)}")
+    lines = head + [
         f"{line.quantity} x {line.name}"
         + (f" ({line.description})" if line.description else "")
         + f"  [{line.product_id}]  {_kr(line.total)}"
         + ("  SOLD OUT" if not line.available else "")
         for line in b.lines
-    ] or ["(empty basket)"]
+    ] or [*head, "(empty basket)"]
     lines.append(
         f"products {_kr(b.products_price)}, delivery {_kr(b.delivery_price)}, total {_kr(b.total_price)}"
     )
@@ -741,7 +884,7 @@ def _text_basket(b: Basket) -> str:
     if b.delivery_slot:
         slot = b.delivery_slot
         state = "reserved" if slot.reserved and not slot.reservation_lost else "not reserved"
-        lines.append(f"delivery: {slot.label or slot.start} ({state})")
+        lines.append(f"delivery: {slot.label or slot.start} ({state}, slot {slot.id})")
     lines += [f"warning: {v.message}" for v in b.validation_failures if v.message]
     return "\n".join(lines)
 
@@ -837,6 +980,8 @@ def to_text(value: Any) -> str:
         if value.skipped:
             return f"skipped {value.query!r}: {value.skipped}"
         head = f"{len(value.products)} of {value.total} results for {value.query!r}"
+        if value.than and value.products:
+            head += f" cheaper than {_than_text(value.than)}"
         return "\n".join([head, *(_product_row(p) for p in value.products)])
     if isinstance(value, Suggestions):
         cats = [f"category: {c.name}  {c.url}" for c in value.categories]
@@ -847,6 +992,11 @@ def to_text(value: Any) -> str:
         return _product_row(value)
     if isinstance(value, Basket):
         return _text_basket(value)
+    if isinstance(value, dishes.Priced):
+        return dishes.text(value)
+    if isinstance(value, DishesAdded):
+        rows = [f"{d.code} {d.name}, {_kr(d.cost)}: {' '.join(d.items) or '-'}" for d in value.dishes]
+        return "\n".join([*rows, _text_basket(value.basket)])
     if isinstance(value, DeliveryDay):
         return _text_day(value)
     if isinstance(value, OrderSummary):
