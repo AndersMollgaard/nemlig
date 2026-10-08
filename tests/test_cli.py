@@ -201,7 +201,7 @@ def test_output_is_utf8_even_when_the_pipe_is_not(capsys, tmp_path, monkeypatch)
         monkeypatch.setattr(sys, "stdout", out)
         assert cli.main(["--no-session", "--text", "prefs"]) == 0
         out.flush()
-        assert out.buffer.getvalue().decode("utf-8").endswith("diet: Ingen svinekød ★\n")
+        assert out.buffer.getvalue().decode("utf-8").splitlines()[-1] == "diet: Ingen svinekød ★"
 
 
 def test_search_and_offers_mark_avoided_products(api, anonymous, capsys, tmp_path):
