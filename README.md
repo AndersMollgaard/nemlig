@@ -190,6 +190,7 @@ uv run ruff check . && uv run ruff format --check .
 
 The live tests only read, plus two reverted writes: a basket quantity change that is set back
 afterwards, and a temporary shopping list that is deleted again.
+GitHub Actions runs the offline tests on Linux and Windows on every push.
 
 ## Repo layout
 
