@@ -1,0 +1,295 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Week 41 Dinners</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column of night cards under a sticky night switcher; on wide screens each card splits into ingredients | method. */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #1b2620;
+  --muted: #5a6a62;
+  --line: #d9e1db;
+  --tint: #e7eee9;
+  --accent: #2e6a4e;
+  --on-accent: #ffffff;
+  --fish: #d0604a;
+  --poultry: #a97a17;
+  --beef: #a23b3b;
+  --pork: #b0566f;
+  --lamb: #76589e;
+  --veg: #c9601a;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111714; --surface: #18201c; --ink: #e4ebe6; --muted: #98a79f; --line: #2a3530;
+    --tint: #1f2a25; --accent: #7cc4a0; --on-accent: #0f1a14;
+    --fish: #f08e78; --poultry: #e0b452; --beef: #e88080; --pork: #ec98b0; --lamb: #b89ae2; --veg: #f0924a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111714; --surface: #18201c; --ink: #e4ebe6; --muted: #98a79f; --line: #2a3530;
+  --tint: #1f2a25; --accent: #7cc4a0; --on-accent: #0f1a14;
+  --fish: #f08e78; --poultry: #e0b452; --beef: #e88080; --pork: #ec98b0; --lamb: #b89ae2; --veg: #f0924a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 1.0625rem/1.55 var(--body); }
+.wrap { max-width: 60rem; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; display: grid; gap: 20px; }
+
+header { display: grid; gap: 10px; }
+.eyebrow { font: 500 0.75rem/1.2 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(2rem, 6vw, 3rem)/1.05 var(--display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 40rem; color: var(--muted); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 0.9375rem; }
+.facts b { font-weight: 700; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.92em; }
+
+nav.nights {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2;
+  display: flex; gap: 8px; overflow-x: auto; padding-block: 10px;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+nav.nights a {
+  flex: none; display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--ink); text-decoration: none; font-size: 0.9375rem;
+}
+nav.nights a:hover { border-color: var(--muted); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dish); flex: none; }
+
+article.night {
+  scroll-margin-top: 72px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 22px 20px 24px; display: grid; gap: 18px;
+}
+.fish { --dish: var(--fish); }
+.poultry { --dish: var(--poultry); }
+.beef { --dish: var(--beef); }
+.pork { --dish: var(--pork); }
+.lamb { --dish: var(--lamb); }
+.veg { --dish: var(--veg); }
+
+.night-head { display: grid; gap: 6px; }
+.night-head .eyebrow { display: flex; align-items: center; gap: 8px; color: var(--dish); }
+h2 { font: 700 clamp(1.45rem, 4.2vw, 1.9rem)/1.12 var(--display); letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
+.en { margin: 0; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 0.9375rem; }
+.meta li { display: inline-flex; gap: 6px; }
+.meta span:first-child { color: var(--muted); }
+
+.cols { display: grid; gap: 22px; }
+@media (min-width: 760px) { .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); gap: 32px; } }
+.cols > section { min-width: 0; display: grid; gap: 10px; align-content: start; }
+h3 { font: 700 0.8125rem/1.2 var(--body); letter-spacing: 0.08em; text-transform: uppercase; margin: 0; color: var(--muted); }
+.group + h3 { margin-top: 8px; }
+
+ul.ingredients { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+ul.ingredients label {
+  display: grid; grid-template-columns: auto 4.6rem minmax(0, 1fr); gap: 10px; align-items: baseline;
+  padding: 6px 4px; border-radius: 8px; cursor: pointer;
+}
+ul.ingredients label:hover { background: var(--tint); }
+ul.ingredients input { accent-color: var(--accent); width: 1.05rem; height: 1.05rem; margin: 0; transform: translateY(2px); }
+.amt { font: 500 0.875rem/1.4 var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.pack { display: block; font-size: 0.8125rem; color: var(--muted); }
+label:has(input:checked) .item, label:has(input:checked) .amt { text-decoration: line-through; color: var(--muted); }
+
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; counter-reset: step; }
+ol.steps li { counter-increment: step; }
+ol.steps label {
+  display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 12px; align-items: start;
+  padding: 8px 6px; border-radius: 10px; cursor: pointer;
+}
+ol.steps label:hover { background: var(--tint); }
+ol.steps input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.badge {
+  width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--dish); color: var(--ink); font: 500 0.875rem/1 var(--mono);
+}
+.badge::before { content: counter(step); }
+label:has(input:checked) .badge { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+label:has(input:checked) .badge::before { content: "✓"; }
+label:has(input:checked) .step-text { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+label:has(input:focus-visible) .badge, ul.ingredients input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.step-text { padding-top: 3px; }
+
+.notes { display: grid; gap: 8px; }
+@media (min-width: 760px) { .notes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.note { margin: 0; background: var(--tint); border-radius: 12px; padding: 12px 14px; font-size: 0.9375rem; }
+.note b { display: block; font: 700 0.75rem/1.3 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font-size: 0.9375rem; color: var(--muted); }
+.tools button {
+  font: 700 0.9375rem/1 var(--body); padding: 10px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.tools button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.tools button:focus-visible, nav.nights a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+@media print {
+  nav.nights, .tools { display: none !important; }
+  body { background: #fff; color: #000; }
+  article.night { break-inside: avoid; border: none; padding: 0 0 24px; }
+}
+</style>
+
+<div class="wrap" data-key="recipes-week-41-dinners">
+<header>
+<span class="eyebrow">Week 41 · delivery fre. 09/10, 16–21</span>
+<h1>Week 41 Dinners</h1>
+<p class="lede">Two dinners for 2 adults and 2 kids. Cook the salmon on Friday, the evening it arrives, since it keeps the shortest. The squash soup follows on Saturday.</p>
+<ul class="facts">
+<li><b>2</b> dinners</li>
+<li><b>3</b> portions each</li>
+<li><b>174.65 kr</b> for both</li>
+</ul>
+</header>
+<nav class="nights" aria-label="Nights">
+<a href="#fri" class="fish"><span class="dot"></span>Fri · Laks</a>
+<a href="#sat" class="veg"><span class="dot"></span>Sat · Hokkaido</a>
+</nav>
+<article class="night fish" id="fri">
+<div class="night-head">
+<span class="eyebrow"><span class="dot"></span>Fri 09/10 · Fish</span>
+<h2>Ovnbagt laks med kartofler, citron og dildcreme</h2>
+<p class="en">Oven-baked salmon with potatoes, lemon and a dill cream</p>
+<ul class="meta">
+<li><span>Time</span><span>35 min</span></li>
+<li><span>Serves</span><span>4</span></li>
+<li><span>Cost</span><span class="num">119.35 kr</span></li>
+</ul>
+</div>
+<div class="cols">
+<section>
+<h3>From the basket</h3>
+<ul class="ingredients group">
+<li><label><input type="checkbox" id="fri-i1"><span class="amt">600 g</span><span class="item">Laksefilet m. skind<span class="pack">the whole pack</span></span></label></li>
+<li><label><input type="checkbox" id="fri-i2"><span class="amt">800 g</span><span class="item">Kartofler øko<span class="pack">of 1 kg</span></span></label></li>
+<li><label><input type="checkbox" id="fri-i3"><span class="amt">1</span><span class="item">Citron lille øko<span class="pack">the whole lemon</span></span></label></li>
+<li><label><input type="checkbox" id="fri-i4"><span class="amt">1 bunch</span><span class="item">Dild i potte<span class="pack">most of the pot</span></span></label></li>
+</ul>
+<h3>At home</h3>
+<ul class="ingredients">
+<li><label><input type="checkbox" id="fri-h1"><span class="amt">2 dl</span><span class="item">Crème fraîche 18%</span></label></li>
+<li><label><input type="checkbox" id="fri-h2"><span class="amt">½ head</span><span class="item">Cauliflower, in florets</span></label></li>
+<li><label><input type="checkbox" id="fri-h3"><span class="amt">1 tbsp</span><span class="item">Butter</span></label></li>
+<li><label><input type="checkbox" id="fri-h4"><span class="amt">2 tbsp</span><span class="item">Oil, plus salt and pepper</span></label></li>
+</ul>
+</section>
+<section>
+<h3>Method</h3>
+<ol class="steps">
+<li><label><input type="checkbox" id="fri-s1"><span class="badge"></span><span class="step-text">Heat the oven to 200 °C (180 °C fan). Cut the potatoes into small wedges, toss them in a roasting tin with 1 tbsp oil and 1 tsp salt, and roast for 15 minutes.</span></label></li>
+<li><label><input type="checkbox" id="fri-s2"><span class="badge"></span><span class="step-text">Meanwhile, finely chop the dill. Stir most of it into the crème fraîche with the zest of the lemon, 1 tbsp lemon juice, salt and pepper. Chill until dinner.</span></label></li>
+<li><label><input type="checkbox" id="fri-s3"><span class="badge"></span><span class="step-text">Lay the salmon skin-down in an oiled ovenproof dish. Season with salt and pepper and top with thin slices of the zested lemon.</span></label></li>
+<li><label><input type="checkbox" id="fri-s4"><span class="badge"></span><span class="step-text">Put the salmon in the oven next to the potatoes and bake for 12–15 minutes, until it just flakes in the middle (50 °C core).</span></label></li>
+<li><label><input type="checkbox" id="fri-s5"><span class="badge"></span><span class="step-text">While it bakes, boil the cauliflower florets in salted water for 5–6 minutes until just tender. Drain and toss with the butter.</span></label></li>
+<li><label><input type="checkbox" id="fri-s6"><span class="badge"></span><span class="step-text">Squeeze the last of the lemon over the potatoes and scatter the rest of the dill over the salmon. Serve with the dill cream.</span></label></li>
+</ol>
+</section>
+</div>
+<div class="notes"><p class="note"><b>Kids</b>Lift the salmon off the skin and check for bones before it goes on their plates.</p>
+<p class="note"><b>Left over</b>About 200 g of potatoes. They keep for a week in a cool, dark place.</p></div>
+</article>
+<article class="night veg" id="sat">
+<div class="night-head">
+<span class="eyebrow"><span class="dot"></span>Sat 10/10 · Vegetarian</span>
+<h2>Hokkaidosuppe med kokos og ingefær, med lune flutes</h2>
+<p class="en">Hokkaido squash soup with coconut and ginger, served with warm flutes</p>
+<ul class="meta">
+<li><span>Time</span><span>40 min</span></li>
+<li><span>Serves</span><span>4</span></li>
+<li><span>Cost</span><span class="num">55.30 kr</span></li>
+</ul>
+</div>
+<div class="cols">
+<section>
+<h3>From the basket</h3>
+<ul class="ingredients group">
+<li><label><input type="checkbox" id="sat-i1"><span class="amt">1 kg</span><span class="item">Hokkaido øko<span class="pack">the whole squash</span></span></label></li>
+<li><label><input type="checkbox" id="sat-i2"><span class="amt">4 dl</span><span class="item">Kokosmælk 17–19%<span class="pack">the whole can</span></span></label></li>
+<li><label><input type="checkbox" id="sat-i3"><span class="amt">4 cm</span><span class="item">Ingefær øko<span class="pack">of 200 g</span></span></label></li>
+<li><label><input type="checkbox" id="sat-i4"><span class="amt">6–8</span><span class="item">Miniflutes, frozen<span class="pack">of about 12</span></span></label></li>
+</ul>
+<h3>At home</h3>
+<ul class="ingredients">
+<li><label><input type="checkbox" id="sat-h1"><span class="amt">1</span><span class="item">Onion</span></label></li>
+<li><label><input type="checkbox" id="sat-h2"><span class="amt">2</span><span class="item">Garlic cloves</span></label></li>
+<li><label><input type="checkbox" id="sat-h3"><span class="amt">6 dl</span><span class="item">Vegetable stock<span class="pack">1 cube</span></span></label></li>
+<li><label><input type="checkbox" id="sat-h4"><span class="amt">1 tsp</span><span class="item">Curry powder or ground cumin</span></label></li>
+<li><label><input type="checkbox" id="sat-h5"><span class="amt">2 tbsp</span><span class="item">Oil, plus salt and pepper</span></label></li>
+</ul>
+</section>
+<section>
+<h3>Method</h3>
+<ol class="steps">
+<li><label><input type="checkbox" id="sat-s1"><span class="badge"></span><span class="step-text">Halve the squash and scoop out the seeds. Cut it into 3 cm chunks and leave the skin on, because it softens as it cooks.</span></label></li>
+<li><label><input type="checkbox" id="sat-s2"><span class="badge"></span><span class="step-text">Chop the onion and garlic and grate the ginger. Soften them in the oil in a large pot over medium heat for 4 minutes.</span></label></li>
+<li><label><input type="checkbox" id="sat-s3"><span class="badge"></span><span class="step-text">Stir in the curry powder and fry it for 30 seconds until fragrant.</span></label></li>
+<li><label><input type="checkbox" id="sat-s4"><span class="badge"></span><span class="step-text">Add the squash, the stock and three quarters of the coconut milk. Cover and simmer for 20 minutes, until the squash is soft.</span></label></li>
+<li><label><input type="checkbox" id="sat-s5"><span class="badge"></span><span class="step-text">Meanwhile, bake the flutes from frozen as the bag says.</span></label></li>
+<li><label><input type="checkbox" id="sat-s6"><span class="badge"></span><span class="step-text">Blend the soup smooth, adding a splash of water if it is too thick. Season with salt and pepper, then swirl the rest of the coconut milk on top.</span></label></li>
+</ol>
+</section>
+</div>
+<div class="notes"><p class="note"><b>Kids</b>Keep the spice to ½ tsp and let them dunk the flutes.</p>
+<p class="note"><b>Save</b>Freeze the rest of the ginger and grate it straight from frozen.</p></div>
+</article>
+  <div class="tools">
+    <button type="button" id="wake" aria-pressed="false" hidden>Keep screen on</button>
+    <button type="button" id="clear">Clear ticks</button>
+    <span>Your ticks are saved on this device only.</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KEY = document.querySelector(".wrap").getAttribute("data-key");
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type="checkbox"]'));
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
+  boxes.forEach(function (b) {
+    if (state[b.id]) b.checked = true;
+    b.addEventListener("change", function () {
+      if (b.checked) state[b.id] = 1; else delete state[b.id];
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+    });
+  });
+  document.getElementById("clear").addEventListener("click", function () {
+    boxes.forEach(function (b) { b.checked = false; });
+    state = {};
+    try { localStorage.removeItem(KEY); } catch (e) {}
+  });
+
+  var wake = document.getElementById("wake");
+  var lock = null;
+  function show() {
+    wake.setAttribute("aria-pressed", lock ? "true" : "false");
+    wake.textContent = lock ? "Screen stays on" : "Keep screen on";
+  }
+  if ("wakeLock" in navigator) {
+    wake.hidden = false;
+    wake.addEventListener("click", function () {
+      if (lock) { lock.release(); lock = null; show(); return; }
+      navigator.wakeLock.request("screen").then(function (l) {
+        lock = l;
+        l.addEventListener("release", function () { lock = null; show(); });
+        show();
+      }).catch(function () {
+        wake.textContent = "Can't keep the screen on here";
+        wake.disabled = true;
+      });
+    });
+  }
+})();
+</script>
+
+</body></html>

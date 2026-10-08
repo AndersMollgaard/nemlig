@@ -22,6 +22,10 @@ agent writes the recipe page.
 
 A real run, sped up. The waits are shortened and the long command output is collapsed.
 
+The recipe page that run wrote: [Week 41 Dinners](https://andersmollgaard.github.io/nemlig/example-recipes.html),
+a card per night with what came from the basket, what you have at home, and steps you can tick
+off while you cook.
+
 ## Requirements
 
 - A nemlig.com account. nemlig.com delivers in Denmark only.
