@@ -19,8 +19,8 @@ NEMLIG_LIVE=1 uv run pytest -m live       # real site with the .env account; onl
 - Keep personal data (names, addresses, contact details) out of the models and fixtures.
 - CLI output costs tokens on every agent call. Keep it lean, and prefer dropping a field to
   adding one.
-- When CLI behaviour changes, update `README.md` and `.claude/skills/nemlig-shopping/SKILL.md`.
-  `tests/test_skills.py` parses every `nemlig` command the skills and README quote.
+- When CLI behaviour changes, update `docs/cli.md` and `.claude/skills/nemlig-shopping/SKILL.md`.
+  `tests/test_skills.py` parses every `nemlig` command the skills, README and `docs/cli.md` quote.
 - `.env` holds real credentials. Never print it or commit it.
 - `preferences.toml` and `groups.json` in the repo root are the household's. They are
   gitignored; never commit a copy. Use a scratch copy via `NEMLIG_PREFS_FILE` (or

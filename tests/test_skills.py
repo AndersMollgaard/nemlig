@@ -1,5 +1,5 @@
-"""The skills and the README quote `nemlig` commands for agents to copy. Every one must still parse,
-so a renamed command or flag breaks this test instead of a live run."""
+"""The skills, the README and docs/cli.md quote `nemlig` commands for agents to copy. Every one
+must still parse, so a renamed command or flag breaks this test instead of a live run."""
 
 import contextlib
 import io
@@ -12,7 +12,7 @@ import pytest
 from nemlig.cli import build_parser
 
 ROOT = Path(__file__).resolve().parent.parent
-DOCS = sorted(ROOT.glob(".claude/skills/*/SKILL.md")) + [ROOT / "README.md"]
+DOCS = sorted(ROOT.glob(".claude/skills/*/SKILL.md")) + [ROOT / "README.md", ROOT / "docs" / "cli.md"]
 
 _INLINE = re.compile(r"`((?:uv run )?nemlig [^`]+)`")
 # Placeholders the docs use: SLOT_ID, ID:QTY, OLD_ID, LIST_ID, Q1 ...
