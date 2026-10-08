@@ -14,12 +14,12 @@ part short: one message with the questions, not one per question.
 ## Flow
 
 1. **Check, in one Bash call:** `nemlig --text setup; nemlig --text status`.
-   - If `nemlig` is not on PATH, run `uv run nemlig --text setup` from the repo root. Offer
-     `uv tool install --editable .` there, so the skills work from any directory, and run it if
-     the user agrees.
-   - `setup` links the skills for the agents it finds, creates `preferences.toml` from the
-     example when missing, and prints where `.env` and `preferences.toml` are. If you are the
-     agent it didn't link for, run `nemlig --text setup --agent codex` (or `--agent claude`).
+   - If `nemlig` is not on PATH, use `uv run nemlig` from the repo root throughout.
+   - `setup` makes the skills available to Claude Code and Codex in sessions started in the
+     repo. It creates `preferences.toml` from the example when missing, and prints where `.env`
+     and `preferences.toml` are.
+   - Don't link the skills for every session (`--user`) unless the user asks to shop from any
+     directory. Then also run `uv tool install --editable .` in the repo, so `nemlig` is on PATH.
    - A `skipped` skill has something else in its place in the skill folder. Tell the user and
      leave it.
    - Newly linked skills show up in a new session of the agent.

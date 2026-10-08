@@ -610,9 +610,10 @@ def cmd_setup(nc: NemligClient, a: argparse.Namespace) -> Any:
             "the skills are not installed with the package. Clone the repo, run "
             "`uv tool install --editable .` in it, and run `nemlig setup` again"
         )
-    agents = a.agent or agent_skills.detect_agents()
+    # The repo links cost nothing, so both agents get them; --user only touches agents installed.
+    agents = a.agent or (agent_skills.detect_agents() if a.user else list(agent_skills.AGENTS))
     if a.remove:
-        return [agent_skills.remove(agent) for agent in agents]
+        return [agent_skills.remove(agent, user=a.user) for agent in agents]
     prefs_file = preferences.default_prefs_file()
     prefs = "exists"
     example = agent_skills.SKILLS_DIR.parents[1] / "preferences.example.toml"
@@ -625,7 +626,7 @@ def cmd_setup(nc: NemligClient, a: argparse.Namespace) -> Any:
         env_file=str(_env_file(a.env_file)),
         prefs=prefs,
         prefs_file=str(prefs_file),
-        agents=[agent_skills.install(agent) for agent in agents],
+        agents=[agent_skills.install(agent, user=a.user) for agent in agents],
     )
 
 
@@ -809,13 +810,20 @@ def build_parser() -> argparse.ArgumentParser:
         sub,
         "setup",
         cmd_setup,
-        "link the agent skills for Claude Code and Codex, create preferences.toml, check credentials",
+        "link the agent skills for Claude Code and Codex in the repo, create preferences.toml, "
+        "check credentials",
     )
     sp.add_argument(
         "--agent",
         action="append",
         choices=agent_skills.AGENTS,
-        help="link for this agent (repeatable; default: each one installed, else claude)",
+        help="set up this agent (repeatable; default: both, or with --user each one installed)",
+    )
+    sp.add_argument(
+        "--user",
+        action="store_true",
+        help="link into the user's skill folders, so every session of the agent loads them "
+        "(default: only sessions started in the repo)",
     )
     sp.add_argument("--remove", action="store_true", help="remove the links into this repo instead")
 
@@ -1036,7 +1044,7 @@ def _text_list(s: ShoppingListSummary) -> str:
 def _text_linked(x: agent_skills.Linked) -> str:
     parts = [
         f"linked {', '.join(x.linked)}" if x.linked else "",
-        f"{len(x.already)} already linked" if x.already else "",
+        f"{len(x.already)} already in place" if x.already else "",
         f"removed {', '.join(x.removed)}" if x.removed else "",
         f"skipped {', '.join(x.skipped)} (something else is there)" if x.skipped else "",
     ]

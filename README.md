@@ -41,13 +41,13 @@ Apply the swaps (all, some, none)? Anything to drop from the restock, or anythin
    git clone https://github.com/AndersMollgaard/nemlig.git && cd nemlig
    ```
 2. Install the dependencies with `uv sync`.
-3. Put `nemlig` on your PATH with `uv tool install --editable .`.
-4. Copy `.env.example` to `.env` and fill in your nemlig.com login, `NEMLIG_USER` and
+3. Copy `.env.example` to `.env` and fill in your nemlig.com login, `NEMLIG_USER` and
    `NEMLIG_PASS`.
-5. Run `nemlig setup`. It links the skills into Claude Code's and Codex's skill folders, so they
-   work from any directory, and creates `preferences.toml`.
-6. In Claude Code or Codex, say "set me up". The `nemlig-setup` skill checks the login, asks
-   about your household and writes the preferences, and reads your order history.
+4. Run `uv run nemlig setup`. It links the skills where Codex finds them in the repo, and creates
+   `preferences.toml`.
+5. Start Claude Code or Codex in the clone and say "set me up". The `nemlig-setup` skill checks
+   the login, asks about your household and writes the preferences, and reads your order
+   history.
 
 The shortcut: open Claude Code in the clone and ask it to set things up. The skill walks you
 through the rest, except the password, which you type into `.env` yourself.
@@ -71,9 +71,13 @@ The skills read the household's preferences with `nemlig prefs`. When you correc
 
 ### Claude Code and Codex
 
-Both agents read the same `SKILL.md` files. `nemlig setup` links them into `~/.claude/skills`
-for Claude Code and `~/.agents/skills` for Codex (`nemlig setup --agent codex` for Codex
-alone). Inside the repo, Claude Code also finds them in `.claude/skills/`.
+Both agents read the same `SKILL.md` files, and only in sessions started in the clone: Claude
+Code finds them in `.claude/skills/`, and `nemlig setup` links them into `.agents/skills/`
+(gitignored) for Codex. Sessions elsewhere don't load them.
+
+To shop from any directory instead, put `nemlig` on PATH with `uv tool install --editable .` and
+run `nemlig setup --user`. It links the skills into `~/.claude/skills` and `~/.agents/skills`,
+so every session of the agent loads them. `nemlig setup --user --remove` takes them out again.
 
 Two features use Claude Code tools and fall back elsewhere:
 

@@ -63,9 +63,25 @@ def test_detect_agents(home):
     assert agent_skills.detect_agents() == ["claude", "codex"]
 
 
-def test_setup_links_for_both_agents_and_creates_preferences(home, capsys, tmp_path):
+def test_setup_links_in_the_repo_for_both_agents_by_default(home, capsys, tmp_path, source):
+    code = cli.main(["--no-session", "setup"])
+    out = json.loads(capsys.readouterr().out)
+    assert code == 0
+    claude, codex = out["agents"]
+    assert claude["dir"] == str(source) and claude["already"] == ["nemlig-cheaper", "nemlig-shopping"]
+    assert codex["dir"] == str(tmp_path / "repo" / ".agents" / "skills")
+    assert (tmp_path / "repo" / ".agents" / "skills" / "nemlig-shopping" / "SKILL.md").is_file()
+    assert not (home / ".claude" / "skills").exists() and not (home / ".agents").exists()
+
+    assert cli.main(["--no-session", "setup", "--remove"]) == 0
+    assert "nemlig-shopping" in capsys.readouterr().out
+    assert (source / "nemlig-shopping" / "SKILL.md").is_file()
+    assert not list((tmp_path / "repo" / ".agents" / "skills").iterdir())
+
+
+def test_setup_user_links_for_both_agents_and_creates_preferences(home, capsys, tmp_path):
     (tmp_path / "repo" / "preferences.example.toml").write_text('diet = "x"\n', encoding="utf-8")
-    code = cli.main(["--no-session", "setup", "--agent", "claude", "--agent", "codex"])
+    code = cli.main(["--no-session", "setup", "--user", "--agent", "claude", "--agent", "codex"])
     out = json.loads(capsys.readouterr().out)
     assert code == 0
     assert out["credentials"] is False and out["prefs"] == "created"
@@ -74,13 +90,13 @@ def test_setup_links_for_both_agents_and_creates_preferences(home, capsys, tmp_p
     assert (home / ".claude" / "skills" / "nemlig-shopping" / "SKILL.md").is_file()
     assert (home / ".agents" / "skills" / "nemlig-shopping" / "SKILL.md").is_file()
 
-    code = cli.main(["--no-session", "--text", "setup", "--agent", "codex"])
+    code = cli.main(["--no-session", "--text", "setup", "--user", "--agent", "codex"])
     text = capsys.readouterr().out
     assert "credentials: missing; put NEMLIG_USER and NEMLIG_PASS in" in text
     assert "preferences: exists" in text
-    assert "codex " in text and ": 2 already linked" in text
+    assert "codex " in text and ": 2 already in place" in text
 
-    code = cli.main(["--no-session", "--text", "setup", "--agent", "codex", "--remove"])
+    code = cli.main(["--no-session", "--text", "setup", "--user", "--agent", "codex", "--remove"])
     assert code == 0
     assert "removed nemlig-cheaper, nemlig-shopping" in capsys.readouterr().out
     assert not (home / ".agents" / "skills" / "nemlig-shopping").exists()

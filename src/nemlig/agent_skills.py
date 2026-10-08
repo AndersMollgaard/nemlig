@@ -1,8 +1,10 @@
-"""Link the repo's agent skills into Claude Code's and Codex's user skill folders, for `nemlig setup`.
+"""Link the repo's agent skills where Claude Code and Codex find them, for `nemlig setup`.
 
 The skills live in ``.claude/skills/`` in the repo, where Claude Code finds them inside a clone.
-Linking them into the user folders lets both agents use them from any directory, and a ``git
-pull`` updates them in place. They are not in the wheel, so this needs the cloned repo.
+Codex reads ``.agents/skills/``, so by default that gets a link per skill, and both agents load
+the skills only when started in the repo. ``user`` links them into the user's own skill folders
+instead, which every session of the agent loads. A ``git pull`` updates the skills in place.
+They are not in the wheel, so this needs the cloned repo.
 """
 
 from __future__ import annotations
@@ -24,11 +26,13 @@ def agent_home(agent: str) -> Path:
     return Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
 
 
-def skills_target(agent: str) -> Path:
-    """The agent's user skill folder. Codex reads ``~/.agents/skills``, not its own home."""
-    if agent == "claude":
-        return agent_home("claude") / "skills"
-    return Path.home() / ".agents" / "skills"
+def skills_target(agent: str, user: bool = False, source: Path | None = None) -> Path:
+    """The agent's skill folder in the repo, or with ``user`` its user skill folder. Codex reads
+    ``.agents/skills`` in both, not its own home."""
+    if user:
+        return agent_home("claude") / "skills" if agent == "claude" else Path.home() / ".agents" / "skills"
+    repo = (source or SKILLS_DIR).parents[1]
+    return repo / (".claude" if agent == "claude" else ".agents") / "skills"
 
 
 def detect_agents() -> list[str]:
@@ -77,10 +81,13 @@ def _unlink(path: Path) -> None:
         path.unlink()
 
 
-def install(agent: str, source: Path | None = None, target: Path | None = None) -> Linked:
+def install(agent: str, source: Path | None = None, target: Path | None = None, user: bool = False) -> Linked:
     source = source or SKILLS_DIR
-    target = target or skills_target(agent)
+    target = target or skills_target(agent, user, source)
     out = Linked(agent=agent, dir=str(target))
+    if target == source:  # Claude Code in the repo reads the skills where they are
+        out.already = skill_names(source)
+        return out
     target.mkdir(parents=True, exist_ok=True)
     for name in skill_names(source):
         dst = target / name
@@ -94,12 +101,12 @@ def install(agent: str, source: Path | None = None, target: Path | None = None) 
     return out
 
 
-def remove(agent: str, source: Path | None = None, target: Path | None = None) -> Linked:
+def remove(agent: str, source: Path | None = None, target: Path | None = None, user: bool = False) -> Linked:
     """Remove the links into ``source``, also ones whose skill was renamed since."""
     source = source or SKILLS_DIR
-    target = target or skills_target(agent)
+    target = target or skills_target(agent, user, source)
     out = Linked(agent=agent, dir=str(target))
-    if target.is_dir():
+    if target != source and target.is_dir():
         for dst in sorted(target.iterdir()):
             if _ours(dst, source):
                 _unlink(dst)
