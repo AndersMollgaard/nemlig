@@ -1,7 +1,7 @@
 [project]
 name = "nemlig"
 version = "0.1.0"
-description = "Unofficial Python client for nemlig.com: search products and manage the basket"
+description = "Unofficial nemlig.com client, CLI and agent skills that fill the weekly basket"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

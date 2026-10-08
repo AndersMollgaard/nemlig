@@ -1,5 +1,7 @@
 # nemlig
 
+[![test](https://github.com/AndersMollgaard/nemlig/actions/workflows/test.yml/badge.svg)](https://github.com/AndersMollgaard/nemlig/actions/workflows/test.yml)
+
 Agent skills that do the weekly shop on [nemlig.com](https://www.nemlig.com), the Danish online
 grocery store. Say "fill my basket" in Claude Code or Codex, and the agent restocks the items you
 usually buy, plans dinners around this week's offers, proposes cheaper swaps, and writes a recipe
@@ -135,6 +137,28 @@ with NemligClient.from_env() as nc:
 Search, suggestions, product pages, delivery days and offers also work without an account. The
 methods, and how the client handles expired sessions, retries and delivery slots, are in
 [`docs/library.md`](docs/library.md).
+
+## How it's built
+
+The skills work because the agent never has to count or guess at what the site says. A few
+rules hold the project together, and they carry over to other agent tools:
+
+- **The CLI does the arithmetic, the skills do the judgement.** Unit prices, the restock
+  predictions, the delivery-slot ranking and the dinner-plan totals are computed in `nemlig`
+  and covered by tests. The restock model is backtested against the household's past orders.
+  Deciding whether two products are interchangeable, or what to cook, is left to the model.
+- **Output costs tokens.** Every command prints one lean JSON document, since the agent pays
+  for every field on every call. Dropping a field is preferred to adding one.
+- **One base skill, single-job skills and an orchestrator.** `nemlig-shopping` holds the shared
+  rules. The others load it and do one job each, and `nemlig-fill-basket` chains them and
+  reports once.
+- **Writes are never retried.** Adding to the basket isn't idempotent, so only reads retry, and
+  an expired session, which nemlig answers as an anonymous user, is caught before account
+  calls.
+
+The project was built with coding agents. [`docs/roadmap.md`](docs/roadmap.md) is the plan they
+worked from, with the decisions dated under each step, including the ones reversed after a live
+run.
 
 ## How nemlig.com is put together
 

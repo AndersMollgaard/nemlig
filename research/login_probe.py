@@ -5,7 +5,7 @@ Research script, not the client. It verified on 2026-09-27 that plain HTTP login
 Prints only statuses, shapes and counts -- never credentials or personal data.
 Basket writes use a test product and are reverted at the end.
 
-    python3 research/login_probe.py
+    uv run --with requests python research/login_probe.py
 """
 import base64
 import json

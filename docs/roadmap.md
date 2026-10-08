@@ -310,8 +310,9 @@ buying" are out.
   due rows and the pick list. It replaces the stopgap as `nemlig-fill-basket` step 3, run with
   `--exclude "kød & fisk"`, and its maybes ride along with dinners' checkpoint 1. The base
   skill sends "the usual" and "restock" to it.
-- [ ] **Live run.** One "fill my basket for the week" with the new step 3, and `nemlig-restock`
+- [x] **Live run.** One "fill my basket for the week" with the new step 3, and `nemlig-restock`
   alone.
+  - Done (by 2026-10-08): the user ran several fill-basket runs with the restock step.
 - [x] **Burn-rate model experiment** (2026-10-04, asked by the user). Each group gets a daily
   burn rate in pack units (g, ml, stk, parsed from the description; 98% of lines parse) and a
   stash carried over from recent buys. It is due when the stash runs out before the next
@@ -386,7 +387,8 @@ Done when the user accepts most of the due rows and finds the maybe list relevan
   or "on their way" and the link in the next message.
   - Decided (2026-10-03, by the user): a subagent, so the page never blocks the order flow with
     the user. It costs no `nemlig` call. The agent never asks and never touches the basket.
-- [ ] **Live run.** One fill-basket run where the link arrives without holding up the report.
+- [x] **Live run.** One fill-basket run where the link arrives without holding up the report.
+  - Done (by 2026-10-08): the user ran several fill-basket runs.
 
 Done when a real dinner run ends with a recipe page that matches what went into the basket.
 
@@ -464,6 +466,6 @@ time per run, not counting the user's replies, over ~20 model turns.
 
 - Offline tests run against redacted fixtures in `docs/fixtures/`. Run live tests only when
   needed.
-- When CLI behaviour changes, update `README.md` and `.claude/skills/nemlig-shopping/SKILL.md`.
+- When CLI behaviour changes, update `docs/cli.md` and `.claude/skills/nemlig-shopping/SKILL.md`.
 - `uv run pytest` and `uv run ruff check . && uv run ruff format --check .` pass.
 - Tick the boxes here and note the decisions made.

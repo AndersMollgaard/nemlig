@@ -8,7 +8,7 @@ Redaction: address blocks, names, contact details, ids tied to the person, and f
 the account holder typed are replaced with "<redacted>". A final scan checks that none
 of the account's own personal strings made it into any fixture.
 
-    python3 research/capture_fixtures.py
+    uv run --with requests python research/capture_fixtures.py
 """
 import json
 import os
