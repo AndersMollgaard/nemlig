@@ -13,21 +13,14 @@ the site changes. It fills the basket only: checkout always happens in the brows
 
 ## What a run looks like
 
-"Fill my basket for 3 nights" picks the delivery slot from your past orders and asks you twice:
-which offers to build the dinners on, and which dishes. Then it reports once:
+"Fill my basket. Delivery Friday. Two dinners." The agent reserves your usual Friday delivery
+window, restocks what is due, and asks you twice: which offers to build the dinners on, and
+which dishes. Then it reports once, with cheaper swaps for the whole basket, while a background
+agent writes the recipe page.
 
-```text
-Restocked (8 lines, 231.30 kr): 3 x Letmælk 1,5%, Solsikkerugbrød, 10 x Banan, Toiletpapir, ...
-Dinners:
-- Fri: Ovnstegt kylling med citron og kartofler, 131 kr
-- Sat: Culotte med bagte rodfrugter, 325 kr (Sun: steaksandwich from the leftovers)
-Cheaper swaps (saves 19.90 kr):
-1. Minimælk øko 1 l, Arla 2x → Øko 2x: 25.95 → 20.95 kr/l, saves 10.00 kr
-2. Hakket oksekød 8-12% 500 g, Coop → Danish Crown (2 for 90 kr): saves 9.90 kr
-Recipes: a link to the recipe page, a card per night (Fri, Sat)
-Basket: 1,148.20 kr (budget about 1,200 kr). Delivery fre. 09/10 16-21 (reserved).
-Apply the swaps (all, some, none)? Anything to drop from the restock, or anything else to add?
-```
+![A fill-basket run in Claude Code: restock, offers, dinner picks, report and cheaper swaps](docs/fill-basket.gif)
+
+A real run, sped up. The waits are shortened and the long command output is collapsed.
 
 ## Requirements
 
