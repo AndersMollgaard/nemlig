@@ -18,7 +18,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from . import dishes, preferences, product_cache, restock, slots
+from . import agent_skills, dishes, preferences, product_cache, restock, slots
 from . import groups as groups_file
 from ._paths import home_dir
 from ._version import __version__
@@ -596,6 +596,39 @@ def cmd_logout(nc: NemligClient, a: argparse.Namespace) -> Any:
     return {"ok": True}
 
 
+class Setup(BaseModel):
+    credentials: bool
+    env_file: str
+    prefs: str  # "created" or "exists"
+    prefs_file: str
+    agents: list[agent_skills.Linked]
+
+
+def cmd_setup(nc: NemligClient, a: argparse.Namespace) -> Any:
+    if not agent_skills.skill_names():
+        raise UsageError(
+            "the skills are not installed with the package. Clone the repo, run "
+            "`uv tool install --editable .` in it, and run `nemlig setup` again"
+        )
+    agents = a.agent or agent_skills.detect_agents()
+    if a.remove:
+        return [agent_skills.remove(agent) for agent in agents]
+    prefs_file = preferences.default_prefs_file()
+    prefs = "exists"
+    example = agent_skills.SKILLS_DIR.parents[1] / "preferences.example.toml"
+    if not prefs_file.exists() and example.is_file():
+        prefs_file.parent.mkdir(parents=True, exist_ok=True)
+        prefs_file.write_text(example.read_text(encoding="utf-8"), encoding="utf-8")
+        prefs = "created"
+    return Setup(
+        credentials=nc.has_credentials,
+        env_file=str(_env_file(a.env_file)),
+        prefs=prefs,
+        prefs_file=str(prefs_file),
+        agents=[agent_skills.install(agent) for agent in agents],
+    )
+
+
 # -- parser -----------------------------------------------------------------------------------
 
 
@@ -771,6 +804,20 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--brand", help="brand, ignoring case")
         sp.add_argument("--name", help="part of the product name, ignoring case")
         sp.add_argument("--note", help="why, shown with the rule")
+
+    sp = cmd(
+        sub,
+        "setup",
+        cmd_setup,
+        "link the agent skills for Claude Code and Codex, create preferences.toml, check credentials",
+    )
+    sp.add_argument(
+        "--agent",
+        action="append",
+        choices=agent_skills.AGENTS,
+        help="link for this agent (repeatable; default: each one installed, else claude)",
+    )
+    sp.add_argument("--remove", action="store_true", help="remove the links into this repo instead")
 
     cmd(sub, "status", cmd_status, "whether a login session and credentials are available")
     cmd(sub, "login", cmd_login, "log in with the configured credentials and save the session")
@@ -986,6 +1033,16 @@ def _text_list(s: ShoppingListSummary) -> str:
     return "\n".join([head, *items])
 
 
+def _text_linked(x: agent_skills.Linked) -> str:
+    parts = [
+        f"linked {', '.join(x.linked)}" if x.linked else "",
+        f"{len(x.already)} already linked" if x.already else "",
+        f"removed {', '.join(x.removed)}" if x.removed else "",
+        f"skipped {', '.join(x.skipped)} (something else is there)" if x.skipped else "",
+    ]
+    return f"{x.agent} {x.dir}: " + ("; ".join(p for p in parts if p) or "nothing to do")
+
+
 def to_text(value: Any) -> str:
     if isinstance(value, list):
         return "\n".join(to_text(v) for v in value) if value else "(none)"
@@ -1038,6 +1095,16 @@ def to_text(value: Any) -> str:
         return _text_review(value)
     if isinstance(value, restock.Backtest):
         return _text_backtest(value)
+    if isinstance(value, Setup):
+        creds = (
+            "ok"
+            if value.credentials
+            else (f"missing; put NEMLIG_USER and NEMLIG_PASS in {value.env_file} (see .env.example)")
+        )
+        lines = [f"credentials: {creds}", f"preferences: {value.prefs} {value.prefs_file}"]
+        return "\n".join([*lines, *(_text_linked(x) for x in value.agents)])
+    if isinstance(value, agent_skills.Linked):
+        return _text_linked(value)
     if isinstance(value, SyncResult):
         span = f", {value.first} to {value.last}" if value.first else ""
         return (
