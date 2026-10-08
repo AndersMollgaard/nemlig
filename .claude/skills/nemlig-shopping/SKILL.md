@@ -231,7 +231,8 @@ Errors go to stderr as `{"error": ..., "message": ...}`, or `error: ...` with `-
 
 - Exit 3 means not logged in or the login was rejected. Run `nemlig login` once. If that fails
   too, credentials are missing (`NEMLIG_USER`/`NEMLIG_PASS` in `.env` in the repo root). Tell
-  the user. Don't go looking for credentials.
+  the user, and offer `nemlig-setup` if they haven't set up yet. Don't go looking for
+  credentials.
 - Exit 1 means a nemlig.com or network error. Read-only commands are safe to retry once. For
   writes, check the basket first (see above).
 - Exit 2 is a usage error. Fix the arguments.

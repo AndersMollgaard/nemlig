@@ -116,7 +116,8 @@ Bash call as the write before them (`basket add …; search …`).
 
      Don't wait for it.
 
-   Skip the `Agent` call when the run adds no dinners.
+   Skip the `Agent` call when the run adds no dinners, or when there is no tool to start a
+   background agent (in Codex, for one).
 7. **One report, one question.** First judge every `cheaper than` block from steps 3, 5 and 6
    as in `nemlig-cheaper`, only for lines still in the basket. The rows already carry the
    saving. Then build the report from the handoffs and the last basket output. If that output
@@ -142,6 +143,8 @@ Bash call as the write before them (`basket add …; search …`).
    - Leave out a section that is empty, and the question about swaps when there are none.
    - Maybes that no checkpoint showed go under the restocked line by letter, with "pick any
      maybes by letter" in the question.
+   - Without a recipe agent but with dinners added, write "Recipes: ask and I'll write a page to
+     cook from", and if the user asks, follow `nemlig-recipes` on its own.
    - `Recipes:` gives the link if the recipe agent has handed it back. Otherwise write
      "Recipes: on their way". When the agent hands back later, give the link in one line, in
      the next message or in the reply to the closing question. If it failed, say so in one

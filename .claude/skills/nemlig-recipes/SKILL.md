@@ -1,6 +1,6 @@
 ---
 name: nemlig-recipes
-description: Turn the planned nemlig.com dinners into a recipe page to cook from, a private claude.ai page with a card per night, ingredients split into bought and at home, and the steps. Use when the user asks for recipes, a recipe page, or how to cook the planned dinners. Does not plan dinners or change the basket.
+description: Turn the planned nemlig.com dinners into a recipe page to cook from, a private claude.ai page (or an HTML file) with a card per night, ingredients split into bought and at home, and the steps. Use when the user asks for recipes, a recipe page, or how to cook the planned dinners. Does not plan dinners or change the basket.
 allowed-tools: Bash(nemlig:*), Bash(uv run nemlig:*)
 ---
 
@@ -72,7 +72,8 @@ dishes:
 
 ## Render and publish
 
-1. Write the JSON to the scratchpad as `week-NN-dinners.json`.
+1. Write the JSON to the scratchpad as `week-NN-dinners.json`. Without the Artifact tool (in
+   Codex, for one), write it to `~/.cache/nemlig/recipes/` instead.
 2. Render it into the same directory:
    ```sh
    uv run python SKILL_DIR/render.py week-NN-dinners.json week-NN-dinners.html
@@ -82,3 +83,6 @@ dishes:
    description ("Recipes for the three dinners in Wednesday 7 October's nemlig order"). Each
    week gets a new page. Publishing the same path again in the same session updates that page.
    The page is private until the user shares it.
+
+   Without the Artifact tool, skip this step. The page is the rendered HTML file: give its full
+   path wherever these steps say link or url (`Recipes: <path>`).
