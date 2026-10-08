@@ -28,7 +28,7 @@ def test_round_trip_and_permissions(tmp_path):
 def test_load_missing_or_corrupt(tmp_path):
     assert not SessionStore(tmp_path / "none.json").load(httpx.Cookies().jar)
     bad = tmp_path / "bad.json"
-    bad.write_text("{not json")
+    bad.write_text("{not json", encoding="utf-8")
     assert not SessionStore(bad).load(httpx.Cookies().jar)
 
 
@@ -83,13 +83,13 @@ def test_saving_without_credentials_keeps_the_owner(tmp_path):
     path = tmp_path / "session.json"
     saved_session(path, user_key("a@example.com"))
     NemligClient(session_file=path).close()
-    assert json.loads(path.read_text())["user"] == user_key("a@example.com")
+    assert json.loads(path.read_text(encoding="utf-8"))["user"] == user_key("a@example.com")
 
 
 @pytest.mark.parametrize("content", ["[]", '{"cookies": [1]}', '{"cookies": [{"name": "x"}]}'])
 def test_load_malformed(tmp_path, content):
     path = tmp_path / "session.json"
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
     jar = httpx.Cookies()
     assert not SessionStore(path).load(jar.jar)
     assert not list(jar.jar)

@@ -138,7 +138,7 @@ def test_search_cheaper_than_a_basket_line(api, customer, capsys):
 
 
 def _write_prefs(tmp_path, text):
-    (tmp_path / "preferences.toml").write_text(text)  # NEMLIG_HOME, the repo root
+    (tmp_path / "preferences.toml").write_text(text, encoding="utf-8")  # NEMLIG_HOME, the repo root
 
 
 def test_search_cheaper_than_applies_keep_and_avoid_rules(api, customer, capsys, tmp_path):
@@ -180,11 +180,11 @@ def test_credentials_and_prefs_come_from_the_repo_root_not_the_working_directory
     api, capsys, tmp_path, monkeypatch
 ):
     api.get(f"{WWW}/webapi/Token").respond(json=token_body())
-    (tmp_path / ".env").write_text("NEMLIG_USER=a@example.com\nNEMLIG_PASS=secret\n")
+    (tmp_path / ".env").write_text("NEMLIG_USER=a@example.com\nNEMLIG_PASS=secret\n", encoding="utf-8")
     _write_prefs(tmp_path, 'diet = "No pork."\n')
     elsewhere = tmp_path / "other-project"
     elsewhere.mkdir()
-    (elsewhere / ".env").write_text("NEMLIG_USER=b@example.com\nNEMLIG_PASS=other\n")
+    (elsewhere / ".env").write_text("NEMLIG_USER=b@example.com\nNEMLIG_PASS=other\n", encoding="utf-8")
     monkeypatch.chdir(elsewhere)
     assert cli._env_file(None) == tmp_path / ".env"
     code, out, _ = run(capsys, "status")
@@ -510,7 +510,7 @@ def test_restock_groups_review_and_merge(api, history, capsys, tmp_path):
     assert out.strip() == "reviewed: 2"
     _, out, _ = run(capsys, "restock", "groups", "--text")
     assert out.splitlines() == ["named groups: kaffe", "to review: 0 groups, 0 products"]
-    saved = json.loads((tmp_path / "groups.json").read_text())
+    saved = json.loads((tmp_path / "groups.json").read_text(encoding="utf-8"))
     assert saved == {"groups": {"kaffe": ["java colombia"]}, "reviewed": ["5012294", "5027015"]}
 
 
@@ -533,7 +533,7 @@ def test_status_anonymous(api, anonymous, capsys):
 def test_credentials_from_env_file(api, capsys, tmp_path):
     api.get(f"{WWW}/webapi/Token").respond(json=token_body())
     env = tmp_path / "creds.env"
-    env.write_text("NEMLIG_USER=a@example.com\nNEMLIG_PASS=secret\n")
+    env.write_text("NEMLIG_USER=a@example.com\nNEMLIG_PASS=secret\n", encoding="utf-8")
     code, out, _ = run(capsys, "--env-file", str(env), "status")
     assert code == 0
     assert json.loads(out)["has_credentials"] is True

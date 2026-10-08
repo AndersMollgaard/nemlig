@@ -87,9 +87,9 @@ def test_sync_refetches_an_older_format(api, customer, tmp_path):
     cache = OrderCache(tmp_path)
     cache.sync(customer, now=NOW)
     account = customer.account_key()
-    assert (tmp_path / account / "format").read_text() == str(FORMAT)
+    assert (tmp_path / account / "format").read_text(encoding="utf-8") == str(FORMAT)
 
-    (tmp_path / account / "format").write_text("1")
+    (tmp_path / account / "format").write_text("1", encoding="utf-8")
     assert not cache.is_current(account)
     again = cache.sync(customer, now=NOW)
     assert (again.fetched, again.cached) == (2, 2)

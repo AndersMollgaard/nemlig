@@ -34,7 +34,7 @@ def test_add_rule_round_trips(tmp_path):
 
 def test_add_rule_keeps_free_text(tmp_path):
     path = tmp_path / "preferences.toml"
-    path.write_text('diet = "No pork."')  # no trailing newline
+    path.write_text('diet = "No pork."', encoding="utf-8")  # no trailing newline
     prefs = add_rule(path, "avoid", Rule(id="1"))
     assert prefs.diet == "No pork." and prefs.avoid == [Rule(id="1")]
 
@@ -42,12 +42,12 @@ def test_add_rule_keeps_free_text(tmp_path):
 @pytest.mark.parametrize("text", ["diet = ", 'dieet = "typo"', "[[keep]]\nbrnad = 'x'"])
 def test_bad_file(tmp_path, text):
     path = tmp_path / "preferences.toml"
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
     with pytest.raises(PreferencesError, match="preferences.toml"):
         load(path)
     with pytest.raises(PreferencesError):
         add_rule(path, "keep", Rule(id="1"))
-    assert path.read_text() == text  # nothing appended to a broken file
+    assert path.read_text(encoding="utf-8") == text  # nothing appended to a broken file
 
 
 def test_rule_needs_a_field(tmp_path):

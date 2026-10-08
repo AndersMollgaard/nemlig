@@ -17,5 +17,5 @@ from nemlig._env import read_env_file
 )
 def test_values(tmp_path, line, value):
     path = tmp_path / ".env"
-    path.write_text(f"# comment\n\n{line}\n")
+    path.write_text(f"# comment\n\n{line}\n", encoding="utf-8")
     assert read_env_file(path) == {"K": value}
