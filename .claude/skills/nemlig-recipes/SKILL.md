@@ -75,7 +75,7 @@ dishes:
 1. Write the JSON to the scratchpad as `week-NN-dinners.json`.
 2. Render it into the same directory:
    ```sh
-   python3 SKILL_DIR/render.py week-NN-dinners.json week-NN-dinners.html
+   uv run python SKILL_DIR/render.py week-NN-dinners.json week-NN-dinners.html
    ```
    `SKILL_DIR` is this skill's base directory. On `error:`, fix the JSON and render again.
 3. Publish `week-NN-dinners.html` with the Artifact tool, with icon `recipe` and a one-sentence

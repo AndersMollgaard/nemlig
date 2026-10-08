@@ -1083,6 +1083,10 @@ def _error(exc: Exception) -> tuple[int, dict[str, Any]]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Piped, Windows uses the ANSI code page, which has no ★ and garbles æøå from the agent.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = build_parser()
     try:
         args = parser.parse_args(argv)

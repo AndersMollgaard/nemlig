@@ -1,4 +1,6 @@
+import io
 import json
+import sys
 
 import httpx
 import pytest
@@ -189,6 +191,17 @@ def test_credentials_and_prefs_come_from_the_repo_root_not_the_working_directory
     assert code == 0 and json.loads(out)["has_credentials"] is True
     code, out, _ = run(capsys, "--text", "prefs")
     assert out.splitlines() == [f"file: {tmp_path / 'preferences.toml'}", "diet: No pork."]
+
+
+def test_output_is_utf8_even_when_the_pipe_is_not(capsys, tmp_path, monkeypatch):
+    # Piped on Windows, stdout is in the ANSI code page (cp1252), which has no ★.
+    _write_prefs(tmp_path, 'diet = "Ingen svinekød ★"\n')
+    with capsys.disabled():
+        out = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+        monkeypatch.setattr(sys, "stdout", out)
+        assert cli.main(["--no-session", "--text", "prefs"]) == 0
+        out.flush()
+        assert out.buffer.getvalue().decode("utf-8").endswith("diet: Ingen svinekød ★\n")
 
 
 def test_search_and_offers_mark_avoided_products(api, anonymous, capsys, tmp_path):

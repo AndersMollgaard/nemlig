@@ -1,5 +1,6 @@
 import json
 import stat
+import sys
 
 import httpx
 import pytest
@@ -16,7 +17,8 @@ def test_round_trip_and_permissions(tmp_path):
     jar.set("XSRF-TOKEN", "x", domain=".nemlig.com", path="/")
     SessionStore(path).save(jar.jar)
 
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    if sys.platform != "win32":  # Windows has no mode bits; the user profile's ACL guards it
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
     restored = httpx.Cookies()
     assert SessionStore(path).load(restored.jar)
     assert restored.get(".ASPXAUTH", domain="www.nemlig.com") == "secret"

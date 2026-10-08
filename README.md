@@ -177,7 +177,8 @@ ln -s "$PWD/.claude/skills/nemlig-fill-basket" ~/.claude/skills/nemlig-fill-bask
 ln -s "$PWD/.claude/skills/nemlig-recipes" ~/.claude/skills/nemlig-recipes
 ```
 
-The command still reads `.env`, `preferences.toml` and `groups.json` from the repo.
+On Windows, `ln -s` needs Developer Mode; `mklink /J` from cmd makes the same links. The
+command still reads `.env`, `preferences.toml` and `groups.json` from the repo.
 
 ## Tests
 

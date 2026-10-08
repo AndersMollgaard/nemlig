@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a recipe page from its JSON: ``python3 render.py recipes.json page.html``.
+"""Render a recipe page from its JSON: ``uv run python render.py recipes.json page.html``.
 
 example.json shows the shape. template.html holds the design; this only fills it in, escaping
 every text, so the skill writes content and never HTML.
