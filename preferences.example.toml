@@ -1,6 +1,6 @@
-# Household preferences for the nemlig skills. Copy to ~/.config/nemlig/preferences.toml and
-# fill in what applies; `nemlig prefs` shows what the CLI reads. Everything here is a hard
-# constraint for the skills.
+# Household preferences for the nemlig skills. Copy to preferences.toml and fill in what
+# applies; `nemlig prefs` shows what the CLI reads. Everything here is a hard constraint for
+# the skills.
 
 # Free text, read and judged by Claude.
 # household = "2 adults, 1 child"

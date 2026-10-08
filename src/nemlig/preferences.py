@@ -1,7 +1,6 @@
 """Household preferences: free text for the agent to judge, and rules the CLI enforces.
 
-The file is TOML, ``~/.config/nemlig/preferences.toml`` (`default_prefs_file`), so every working
-directory reads the same one::
+The file is TOML, ``preferences.toml`` in the repo root (`default_prefs_file`)::
 
     household = "2 adults, 1 child"
     diet = "No pork."
@@ -30,14 +29,15 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from ._paths import home_dir
+
 RuleKind = Literal["keep", "avoid"]
 
 
 def default_prefs_file() -> Path:
     if os.environ.get("NEMLIG_PREFS_FILE"):
         return Path(os.environ["NEMLIG_PREFS_FILE"]).expanduser()
-    base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    return base / "nemlig" / "preferences.toml"
+    return home_dir() / "preferences.toml"
 
 
 class Rule(BaseModel):

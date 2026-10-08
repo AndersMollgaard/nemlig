@@ -20,7 +20,7 @@ from pydantic import BaseModel, ValidationError
 
 from . import dishes, preferences, product_cache, restock, slots
 from . import groups as groups_file
-from ._env import read_env_file
+from ._paths import home_dir
 from ._version import __version__
 from .client import SLOT_LOOKUP_DAYS, NemligClient
 from .errors import ApiError, AuthError, NemligError, NotLoggedInError
@@ -74,10 +74,9 @@ notes:
   site's default when anonymous); search and offers take --slot SLOT_ID to see another one.
   Output is JSON on stdout; --text gives a compact human view. Fields that are null or empty
   are left out.
-  Credentials: NEMLIG_USER and NEMLIG_PASS in the environment, in --env-file, in ./.env (if it
-  sets NEMLIG_USER), or in ~/.config/nemlig/.env. The session is saved, so later runs skip the
-  login.
-  Preferences: ~/.config/nemlig/preferences.toml (or NEMLIG_PREFS_FILE). `prefs keep` and
+  Credentials: NEMLIG_USER and NEMLIG_PASS in the environment, in --env-file, or in .env in the
+  repo root. The session is saved, so later runs skip the login.
+  Preferences: preferences.toml in the repo root (or NEMLIG_PREFS_FILE). `prefs keep` and
   `prefs avoid` add rules: search --cheaper-than and restock leave out avoided products, and
   search and offers mark them AVOID.
 
@@ -783,17 +782,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _env_file(arg: str | None) -> Path:
-    """A ``./.env`` counts only when it holds ``NEMLIG_USER``, so another project's `.env` in the
-    working directory doesn't hide ``~/.config/nemlig/.env``."""
+    """``--env-file``, ``NEMLIG_ENV_FILE``, else ``.env`` in the repo root, whatever the working
+    directory."""
     if arg:
         return Path(arg).expanduser()
     if os.environ.get("NEMLIG_ENV_FILE"):
         return Path(os.environ["NEMLIG_ENV_FILE"]).expanduser()
-    local = Path(".env")
-    if read_env_file(local).get("NEMLIG_USER"):
-        return local
-    base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    return base / "nemlig" / ".env"
+    return home_dir() / ".env"
 
 
 def make_client(a: argparse.Namespace) -> NemligClient:
@@ -1069,7 +1064,7 @@ def _error(exc: Exception) -> tuple[int, dict[str, Any]]:
     if isinstance(exc, NotLoggedInError | AuthError):
         code = EXIT_LOGIN
         info["message"] += (
-            ". Set NEMLIG_USER and NEMLIG_PASS (environment, --env-file, ./.env or ~/.config/nemlig/.env)"
+            ". Set NEMLIG_USER and NEMLIG_PASS (environment, --env-file or .env in the repo root)"
         )
     elif isinstance(exc, ApiError):
         code = EXIT_ERROR

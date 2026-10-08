@@ -33,6 +33,12 @@ def token_body(**kwargs) -> dict:
     return {"access_token": make_jwt(**kwargs), "expires_in": 300, "token_type": "Bearer"}
 
 
+@pytest.fixture(autouse=True)
+def no_household_files(monkeypatch, tmp_path):
+    """No test reads or writes the repo's own .env, preferences.toml or groups.json."""
+    monkeypatch.setenv("NEMLIG_HOME", str(tmp_path))
+
+
 @pytest.fixture
 def api():
     """A respx router for both hosts; unmatched requests fail the test."""

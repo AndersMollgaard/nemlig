@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from nemlig import groups as g
@@ -60,7 +62,7 @@ def test_file_round_trip(tmp_path, monkeypatch):
         g.load(path)
 
 
-def test_default_file_is_in_the_config_dir(tmp_path, monkeypatch):
+def test_default_file_is_in_the_repo_root(monkeypatch):
     monkeypatch.delenv("NEMLIG_GROUPS_FILE", raising=False)
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    assert g.default_groups_file() == tmp_path / "nemlig" / "groups.json"
+    monkeypatch.delenv("NEMLIG_HOME")
+    assert g.default_groups_file() == Path(__file__).resolve().parents[1] / "groups.json"

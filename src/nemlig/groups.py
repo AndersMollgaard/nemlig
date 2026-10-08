@@ -25,6 +25,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
+from ._paths import home_dir
+
 _OKO = re.compile(r"\bøko(?:logisk|logiske)?\b\.?")
 
 
@@ -36,8 +38,7 @@ def auto_key(name: str) -> str:
 def default_groups_file() -> Path:
     if os.environ.get("NEMLIG_GROUPS_FILE"):
         return Path(os.environ["NEMLIG_GROUPS_FILE"]).expanduser()
-    base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    return base / "nemlig" / "groups.json"
+    return home_dir() / "groups.json"
 
 
 class Groups(BaseModel):

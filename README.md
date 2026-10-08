@@ -29,7 +29,9 @@ is a snapshot of the living doc
 ## Install
 
 ```sh
-uv sync            # creates .venv with the package and dev tools
+uv sync                                       # creates .venv with the package and dev tools
+cp .env.example .env                          # your nemlig.com login
+cp preferences.example.toml preferences.toml  # optional; the household's preferences
 ```
 
 ## Quickstart
@@ -107,7 +109,7 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
 | `basket [show]`, `basket add ID[:QTY]...`, `basket set ID:QTY...`, `basket remove ID...`, `basket remove-sold-out`, `basket clear --yes` | The basket. `add` also prints how many lines it added and their total |
 | `delivery [--days] [--start] [--available]`, `delivery reserve SLOT_ID`, `delivery suggest [--start] [--days] [--limit]` | Timeslots. `suggest` ranks the bookable slots by the household's past delivery windows (weighted towards the same weekday and recent orders, orders on their way included) and the fee, one per day over several days, with how many recent orders were alike. `reserve` accepts the new slot's prices and prints how the basket total changed and what it can't deliver; it exits 1 when the slot isn't reserved |
 | `orders [--limit] [--page]`, `orders show [ID]`, `orders reorder ID`, `orders sync` | Order history. `show` without an id shows the latest order. `sync` caches every finished order's lines in `~/.cache/nemlig/orders/<account>/` (or `NEMLIG_CACHE_DIR`), fetching only the ones not cached yet |
-| `restock [--slot] [--exclude CAT...] [--no-offers]`, `restock groups`, `restock groups merge NAME KEY_OR_ID...`, `restock groups reviewed`, `restock backtest [--last N]` | The usual products due for the delivery slot, predicted from the cached order history (it syncs first; an order on its way counts as bought). Rows are split into `due`, likely enough to add, and lettered `maybe` rows to pick from, with the chance and the usual gap. Products in the basket and `avoid` matches are left out, and a less likely product on offer for the slot joins the maybes if it was bought in at least 3 orders in the last year. `groups` lists new products to review, `merge` counts several names or ids as one need (stored in `~/.config/nemlig/groups.json`, or `NEMLIG_GROUPS_FILE`), and `backtest` scores the predictions on the last cached orders |
+| `restock [--slot] [--exclude CAT...] [--no-offers]`, `restock groups`, `restock groups merge NAME KEY_OR_ID...`, `restock groups reviewed`, `restock backtest [--last N]` | The usual products due for the delivery slot, predicted from the cached order history (it syncs first; an order on its way counts as bought). Rows are split into `due`, likely enough to add, and lettered `maybe` rows to pick from, with the chance and the usual gap. Products in the basket and `avoid` matches are left out, and a less likely product on offer for the slot joins the maybes if it was bought in at least 3 orders in the last year. `groups` lists new products to review, `merge` counts several names or ids as one need (stored in `groups.json` in the repo root, or `NEMLIG_GROUPS_FILE`), and `backtest` scores the predictions on the last cached orders |
 | `favourites`, `offers [--limit] [--slot] [--category C...] [--min-discount PCT] [--categories]` | Favourites and offers. `--category` keeps a top or sub category (`koed`, `kylling`; `kød` works too), `--min-discount` keeps offers at least that many percent off, and `--categories` counts the offers per category instead |
 | `dishes` (spec on stdin), `dishes add CODE... [ID:QTY...]` | Price a dinner plan: the dish tables with the extras, the price per portion and the ★ set's total, from the prices `search` and `offers` printed (no request). `add` puts the picked dishes' anchors and extras in the basket, each product once. The spec format is in `src/nemlig/dishes.py` and `nemlig-dinners` |
 | `lists`, `lists show ID`, `lists create NAME`, `lists set LIST_ID ID:QTY...`, `lists delete ID --yes`, `lists to-basket ID` | Shopping lists |
@@ -131,14 +133,12 @@ nemlig --text basket                       # lines, totals, minimum order, deliv
   nemlig.com or network error (also `delivery reserve` when the slot isn't reserved), 2 bad
   usage, 3 not logged in or login rejected.
 - **Credentials** come from `NEMLIG_USER` / `NEMLIG_PASS` in the environment, `--env-file`
-  (or `NEMLIG_ENV_FILE`), `./.env` if it sets `NEMLIG_USER` (so another project's `.env`
-  doesn't get in the way), or `~/.config/nemlig/.env`, in that order. The session is saved as
+  (or `NEMLIG_ENV_FILE`), or `.env` in the repo root, in that order. The session is saved as
   with the library; `--no-session` turns that off.
-- **Preferences** live in `~/.config/nemlig/preferences.toml` (or `NEMLIG_PREFS_FILE`), the
-  same file from every working directory. It holds free text for the agent (household, diet,
-  always, budget) and `[[keep]]` and `[[avoid]]` rules. A rule matches when every field it sets
-  matches: `id`, `brand` (ignoring case) and part of the `name`. Start from
-  `cp preferences.example.toml ~/.config/nemlig/preferences.toml`.
+- **Preferences** live in `preferences.toml` in the repo root (or `NEMLIG_PREFS_FILE`). It holds
+  free text for the agent (household, diet, always, budget) and `[[keep]]` and `[[avoid]]`
+  rules. A rule matches when every field it sets matches: `id`, `brand` (ignoring case) and part
+  of the `name`. Start from `preferences.example.toml`.
 - **The restock model** is a smoothed table of how often this household bought a group, by its
   recent purchase rate and how due it is. Fancier models were tested against it on the order
   history (logistic regression, splines, gradient boosting, isotonic regression on the rate,
@@ -175,9 +175,9 @@ ln -s "$PWD/.claude/skills/nemlig-dinners" ~/.claude/skills/nemlig-dinners
 ln -s "$PWD/.claude/skills/nemlig-restock" ~/.claude/skills/nemlig-restock
 ln -s "$PWD/.claude/skills/nemlig-fill-basket" ~/.claude/skills/nemlig-fill-basket
 ln -s "$PWD/.claude/skills/nemlig-recipes" ~/.claude/skills/nemlig-recipes
-cp .env ~/.config/nemlig/.env                      # credentials, if not in the environment
-cp preferences.example.toml ~/.config/nemlig/preferences.toml   # then fill it in
 ```
+
+The command still reads `.env`, `preferences.toml` and `groups.json` from the repo.
 
 ## Tests
 
@@ -204,12 +204,13 @@ afterwards, and a temporary shopping list that is deleted again.
 | `tests/` | Offline unit tests; `tests/live/` hits the real site |
 | `docs/nemlig-api.md` | API investigation and endpoint reference. **Start here** for the API |
 | `docs/fixtures/` | Trimmed, redacted real responses for each endpoint (shape references and test data) |
+| `.env.example`, `preferences.example.toml` | Templates for your `.env` and `preferences.toml`. Those and `groups.json` are gitignored |
 | `research/` | The original probe scripts (`login_probe.py`, `capture_fixtures.py`). Research tools, not the client |
 
 ## Credentials
 
-`NEMLIG_USER` and `NEMLIG_PASS` go in `.env` in the repo root. It is listed in `.gitignore`;
-never commit it.
+`NEMLIG_USER` and `NEMLIG_PASS` go in `.env` in the repo root (copy `.env.example`). It is
+listed in `.gitignore`; never commit it.
 
 ## Acknowledgements
 

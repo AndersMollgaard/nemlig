@@ -125,8 +125,6 @@ def cli_env(monkeypatch, tmp_path):
     for name in ("NEMLIG_USER", "NEMLIG_PASS", "NEMLIG_ENV_FILE", "NEMLIG_PREFS_FILE", "NEMLIG_CACHE_DIR"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    monkeypatch.chdir(tmp_path)
 
 
 def test_cli_prices_what_search_printed_then_adds_the_picks(api, cli_env, monkeypatch, capsys):

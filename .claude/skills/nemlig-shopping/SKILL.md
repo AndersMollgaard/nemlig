@@ -46,10 +46,10 @@ Round trips matter most. Every step below is meant to save one.
 
 ## Preferences
 
-`~/.config/nemlig/preferences.toml` holds what the household always wants. Read it once per
+`preferences.toml` in the repo root holds what the household always wants. Read it once per
 session, before choosing products: `nemlig --text prefs` prints it and its path, or says it
-isn't created yet (then copy `preferences.example.toml` from the repo to that path, or let the
-first `prefs keep`/`avoid` create it).
+isn't created yet (then copy `preferences.example.toml` to that path, or let the first
+`prefs keep`/`avoid` create it).
 
 ```toml
 household = "2 adults, 1 child"
@@ -230,8 +230,8 @@ nemlig --help                                       # everything else
 Errors go to stderr as `{"error": ..., "message": ...}`, or `error: ...` with `--text`.
 
 - Exit 3 means not logged in or the login was rejected. Run `nemlig login` once. If that fails
-  too, credentials are missing (`NEMLIG_USER`/`NEMLIG_PASS` in `./.env` or
-  `~/.config/nemlig/.env`). Tell the user. Don't go looking for credentials.
+  too, credentials are missing (`NEMLIG_USER`/`NEMLIG_PASS` in `.env` in the repo root). Tell
+  the user. Don't go looking for credentials.
 - Exit 1 means a nemlig.com or network error. Read-only commands are safe to retry once. For
   writes, check the basket first (see above).
 - Exit 2 is a usage error. Fix the arguments.

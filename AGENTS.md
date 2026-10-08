@@ -22,5 +22,6 @@ NEMLIG_LIVE=1 uv run pytest -m live       # real site with the .env account; onl
 - When CLI behaviour changes, update `README.md` and `.claude/skills/nemlig-shopping/SKILL.md`.
   `tests/test_skills.py` parses every `nemlig` command the skills and README quote.
 - `.env` holds real credentials. Never print it or commit it.
-- `~/.config/nemlig/preferences.toml` is the household's. Never commit a copy; use a scratch
-  copy via `NEMLIG_PREFS_FILE` when testing.
+- `preferences.toml` and `groups.json` in the repo root are the household's. They are
+  gitignored; never commit a copy. Use a scratch copy via `NEMLIG_PREFS_FILE` (or
+  `NEMLIG_GROUPS_FILE`) when testing.

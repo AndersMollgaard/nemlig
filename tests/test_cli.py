@@ -21,8 +21,6 @@ def no_credentials(monkeypatch, tmp_path):
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))  # no ~/.cache/nemlig
-    monkeypatch.chdir(tmp_path)  # no ./.env
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))  # no ~/.config/nemlig/.env
 
 
 def run(capsys, *argv):
@@ -138,8 +136,7 @@ def test_search_cheaper_than_a_basket_line(api, customer, capsys):
 
 
 def _write_prefs(tmp_path, text):
-    (tmp_path / "nemlig").mkdir(exist_ok=True)
-    (tmp_path / "nemlig" / "preferences.toml").write_text(text)  # ~/.config/nemlig
+    (tmp_path / "preferences.toml").write_text(text)  # NEMLIG_HOME, the repo root
 
 
 def test_search_cheaper_than_applies_keep_and_avoid_rules(api, customer, capsys, tmp_path):
@@ -172,25 +169,26 @@ def test_prefs_add_and_show(capsys, tmp_path):
         "keep: id '5027015'",
         "avoid: brand 'First Price' name 'toiletpapir' (for tynd)",
     ]
-    assert (tmp_path / "nemlig" / "preferences.toml").is_file()  # ~/.config/nemlig
+    assert (tmp_path / "preferences.toml").is_file()
     code, _, err = run(capsys, "prefs", "keep")
     assert code == 2 and "at least one of id, brand or name" in err
 
 
-def test_an_unrelated_env_in_the_working_directory_is_ignored(api, capsys, tmp_path):
+def test_credentials_and_prefs_come_from_the_repo_root_not_the_working_directory(
+    api, capsys, tmp_path, monkeypatch
+):
     api.get(f"{WWW}/webapi/Token").respond(json=token_body())
-    (tmp_path / ".env").write_text("DATABASE_URL=x\n")  # another project's .env
+    (tmp_path / ".env").write_text("NEMLIG_USER=a@example.com\nNEMLIG_PASS=secret\n")
     _write_prefs(tmp_path, 'diet = "No pork."\n')
-    (tmp_path / "nemlig" / ".env").write_text("NEMLIG_USER=a@example.com\nNEMLIG_PASS=secret\n")
+    elsewhere = tmp_path / "other-project"
+    elsewhere.mkdir()
+    (elsewhere / ".env").write_text("NEMLIG_USER=b@example.com\nNEMLIG_PASS=other\n")
+    monkeypatch.chdir(elsewhere)
+    assert cli._env_file(None) == tmp_path / ".env"
     code, out, _ = run(capsys, "status")
     assert code == 0 and json.loads(out)["has_credentials"] is True
     code, out, _ = run(capsys, "--text", "prefs")
-    assert out.splitlines() == [f"file: {tmp_path / 'nemlig' / 'preferences.toml'}", "diet: No pork."]
-    # A ./.env with nemlig credentials still wins, and the preferences stay where they are.
-    (tmp_path / ".env").write_text("NEMLIG_USER=b@example.com\nNEMLIG_PASS=other\n")
-    assert cli._env_file(None).resolve() == (tmp_path / ".env").resolve()
-    code, out, _ = run(capsys, "--text", "prefs")
-    assert out.splitlines()[1] == "diet: No pork."
+    assert out.splitlines() == [f"file: {tmp_path / 'preferences.toml'}", "diet: No pork."]
 
 
 def test_search_and_offers_mark_avoided_products(api, anonymous, capsys, tmp_path):
@@ -499,7 +497,7 @@ def test_restock_groups_review_and_merge(api, history, capsys, tmp_path):
     assert out.strip() == "reviewed: 2"
     _, out, _ = run(capsys, "restock", "groups", "--text")
     assert out.splitlines() == ["named groups: kaffe", "to review: 0 groups, 0 products"]
-    saved = json.loads((tmp_path / "nemlig" / "groups.json").read_text())
+    saved = json.loads((tmp_path / "groups.json").read_text())
     assert saved == {"groups": {"kaffe": ["java colombia"]}, "reviewed": ["5012294", "5027015"]}
 
 

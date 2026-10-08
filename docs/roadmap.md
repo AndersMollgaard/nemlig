@@ -27,8 +27,8 @@ they belong to. Phase 5 depends only on Phase 2, so it can be done before Phases
   basket".
 - **One report when chained.** In a chained run, sub-skills hand back their changes and proposals
   instead of reporting to the user. The orchestrator reports once.
-- **Personal data stays out of git.** Preferences and product groups go in `~/.config/nemlig/`.
-  Cached orders go under `~/.cache/nemlig/`.
+- **Personal data stays out of git.** Preferences and product groups go in the repo root,
+  gitignored, next to `.env`. Cached orders go under `~/.cache/nemlig/`.
 - **Never retry writes.** This rule still applies to every skill.
 
 ## Phase 0: Foundations
@@ -49,6 +49,11 @@ they belong to. Phase 5 depends only on Phase 2, so it can be done before Phases
     without a word, and an unrelated `./.env` hid the credentials. `./.env` now counts only
     when it sets `NEMLIG_USER`. Avoid rules are also marked `AVOID` in `search` and `offers`,
     the two commands dinners picks from, so no skill matches rules by eye.
+  - Moved back (2026-10-08): `.env`, `preferences.toml` and `groups.json` in the repo root,
+    gitignored, with `.env.example` and `preferences.example.toml` beside them. Files in
+    `~/.config` were hard to find for someone working from a copy of the repo. The root is
+    found from the package's location, not the working directory, so the 2026-10-03 problem
+    stays fixed. `NEMLIG_HOME` overrides it, and the tests point it at a scratch directory.
 - [x] **Order-history paging.** `get_orders` (`src/nemlig/client.py`) sends `page` as `skip`.
   Check live how `GetBasicOrderHistory` pages and how far back history goes. Write the findings
   in `docs/nemlig-api.md`.
@@ -262,7 +267,7 @@ buying" are out.
   - Latest, because nemlig renamed 25 of 1104 ids ("Letmælk" → "Letmælk 1,5%").
   - nemlig names are generic with the brand in the description, so names already merge most
     brands: the last year's 584 ids made 523 groups.
-  - `~/.config/nemlig/groups.json` (`NEMLIG_GROUPS_FILE`) records named groups, whose members
+  - `groups.json` in the repo root (`NEMLIG_GROUPS_FILE`) records named groups, whose members
     are auto keys or product ids (an id wins over its name), and the reviewed ids.
     `restock groups` lists unreviewed products from the last year in groups bought twice or
     more. `merge` and `reviewed` maintain the file.
