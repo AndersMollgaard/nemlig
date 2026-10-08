@@ -3,6 +3,8 @@ name = "nemlig"
 version = "0.1.0"
 description = "Unofficial Python client for nemlig.com: search products and manage the basket"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.27",
