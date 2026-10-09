@@ -19,7 +19,7 @@ don't ask anything, because nobody is waiting on you. Write the page as in *Writ
 The brief looks like this:
 ```
 Recipe brief
-household: 2 adults, 2 children aged 6 and 4
+household: 2 adults, 1 child aged 8
 diet: none
 delivery: ons. 07/10 kl. 16-21
 dishes:

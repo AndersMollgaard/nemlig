@@ -96,8 +96,8 @@ what is due from the whole order history. For "same as last time", take the prod
 order history rather than searching:
 ```sh
 nemlig --text orders --limit 3                 # recent orders: id, date, total
-nemlig --text orders show 88876788             # lines as "QTY x NAME [PRODUCT_ID] PRICE" (no id: the latest)
-nemlig --text orders reorder 88876788          # adds the whole order (additive!)
+nemlig --text orders show 12345678             # lines as "QTY x NAME [PRODUCT_ID] PRICE" (no id: the latest)
+nemlig --text orders reorder 12345678          # adds the whole order (additive!)
 ```
 Use `reorder` only when the user wants the whole order again. To pick from it, read the
 lines and `basket add` the ones you want.
